@@ -1,0 +1,50 @@
+name: nabra_frontend
+description: Nabra Flutter frontend scaffold (Auth, Sessions, Lip Reading, Chat, Dictionary, Admin)
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: '>=3.3.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # Networking
+  dio: ^5.7.0
+
+  # State management
+  flutter_riverpod: ^2.6.1
+
+  # Routing
+  go_router: ^14.6.2
+
+  # Secure token storage
+  flutter_secure_storage: ^9.2.2
+
+  # Localization
+  intl: ^0.19.0
+  flutter_localizations:
+    sdk: flutter
+
+  # Media (lip-reading + voice)
+  camera: ^0.11.0+2
+
+  # Utils
+  equatable: ^2.0.5
+
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/
+    - assets/icons/
+    - assets/translations/
+
+  # Enable Flutter's gen-l10n (you can add arb files later)
+  generate: true
