@@ -3,29 +3,35 @@ import '../domain/auth_tokens.dart';
 import 'auth_api.dart';
 
 class AuthRepository {
-  AuthRepository({required AuthApi api, required TokenStorage tokenStorage})
-      : _api = api,
+  AuthRepository({
+    required AuthApi api,
+    required TokenStorage tokenStorage,
+  })  : _api = api,
         _tokenStorage = tokenStorage;
 
   final AuthApi _api;
   final TokenStorage _tokenStorage;
 
-  Future<void> login(String email, String password) async {
-    final AuthTokens tokens = await _api.login(email: email, password: password);
+  // LOGIN
+  Future<void> login(String username, String password) async {
+    final AuthTokens tokens =
+        await _api.login(username: username, password: password);
+
     await _tokenStorage.saveAccessToken(tokens.accessToken);
   }
 
+  // REGISTER ✅ (بدون preferredLanguage)
   Future<void> register({
-    required String fullName,
+    required String username,
     required String email,
     required String password,
-    String preferredLanguage = 'en',
+    required String displayName,
   }) async {
     await _api.register(
-      fullName: fullName,
+      username: username,
       email: email,
       password: password,
-      preferredLanguage: preferredLanguage,
+      displayName: displayName,
     );
   }
 
