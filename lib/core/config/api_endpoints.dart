@@ -2,11 +2,13 @@ class ApiEndpoints {
   static const String authRegister = '/v1/auth/register';
   static const String authLogin = '/v1/auth/login';
 
+  // 🔐 Google Auth
+  static const String authGoogle = '/v1/auth/google';
+
   static const String authForgotPassword = '/v1/auth/forgot-password';
-
   static const String authVerifyResetCode = '/v1/auth/verify-reset-code';
-
   static const String authResetPassword = '/v1/auth/reset-password';
+
   static const String me = '/v1/users/me';
 
   static const String sessionsStart = '/v1/sessions/start';

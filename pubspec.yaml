@@ -9,7 +9,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-
+  google_sign_in: ^6.2.1
   # Networking
   dio: ^5.7.0
 
@@ -48,3 +48,4 @@ flutter:
 
   # Enable Flutter's gen-l10n (you can add arb files later)
   generate: true
+

@@ -12,7 +12,6 @@ class AuthRepository {
   final AuthApi _api;
   final TokenStorage _tokenStorage;
 
-  // LOGIN
   Future<void> login(String username, String password) async {
     final AuthTokens tokens =
         await _api.login(username: username, password: password);
@@ -20,7 +19,12 @@ class AuthRepository {
     await _tokenStorage.saveAccessToken(tokens.accessToken);
   }
 
-  // REGISTER ✅ (بدون preferredLanguage)
+  Future<void> googleLogin(String idToken) async {
+    final AuthTokens tokens = await _api.googleLogin(idToken: idToken);
+
+    await _tokenStorage.saveAccessToken(tokens.accessToken);
+  }
+
   Future<void> register({
     required String username,
     required String email,

@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
 import '../../../core/providers.dart';
 import '../data/auth_api.dart';
@@ -32,7 +33,7 @@ class AuthController extends StateNotifier<AsyncValue<void>> {
   final AuthRepository _repo;
 
   // ===============================
-  // LOGIN
+  // LOGIN (username + password)
   // ===============================
   Future<void> login(String username, String password) async {
     state = const AsyncLoading();
@@ -42,7 +43,36 @@ class AuthController extends StateNotifier<AsyncValue<void>> {
   }
 
   // ===============================
-  // REGISTER ✅ (متطابق مع الباك)
+  // GOOGLE LOGIN ✅ (النهائي)
+  // ===============================
+  Future<void> loginWithGoogle() async {
+    state = const AsyncLoading();
+
+    state = await AsyncValue.guard(() async {
+      final googleSignIn = GoogleSignIn(
+        scopes: const ['email', 'profile'],
+        serverClientId:
+            '839005087126-rc1kc0ujab07u2njkcc2ara0pcvcj3qh.apps.googleusercontent.com',
+      );
+
+      final account = await googleSignIn.signIn();
+      if (account == null) {
+        throw Exception('تم إلغاء تسجيل الدخول باستخدام Google');
+      }
+
+      final auth = await account.authentication;
+      final idToken = auth.idToken;
+
+      if (idToken == null) {
+        throw Exception('فشل الحصول على Google ID Token');
+      }
+
+      await _repo.googleLogin(idToken);
+    });
+  }
+
+  // ===============================
+  // REGISTER
   // ===============================
   Future<void> register({
     required String username,

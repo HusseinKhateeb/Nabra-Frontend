@@ -27,6 +27,20 @@ class AuthApi {
   }
 
   // ===============================
+  // GOOGLE LOGIN ✅
+  // ===============================
+  Future<AuthTokens> googleLogin({
+    required String idToken,
+  }) async {
+    final Response res = await _client.dio.post(
+      ApiEndpoints.authGoogle,
+      data: {'idToken': idToken},
+    );
+
+    return AuthTokens.fromJson(res.data);
+  }
+
+  // ===============================
   // REGISTER
   // ===============================
   Future<void> register({
@@ -55,9 +69,7 @@ class AuthApi {
   }) async {
     await _client.dio.post(
       ApiEndpoints.authForgotPassword,
-      data: {
-        'email': email,
-      },
+      data: {'email': email},
     );
   }
 
@@ -78,7 +90,7 @@ class AuthApi {
   }
 
   // ===============================
-  // RESET PASSWORD ✅ (المكان الصحيح)
+  // RESET PASSWORD
   // ===============================
   Future<void> resetPassword({
     required String email,
