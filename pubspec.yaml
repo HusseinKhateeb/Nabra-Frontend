@@ -9,7 +9,18 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+
+  # Realtime chat
+  stomp_dart_client: ^1.0.1
+
+  # Localization & dates
+  intl: ^0.20.2
+  flutter_localizations:
+    sdk: flutter
+
+  # Auth
   google_sign_in: ^6.2.1
+
   # Networking
   dio: ^5.7.0
 
@@ -22,16 +33,12 @@ dependencies:
   # Secure token storage
   flutter_secure_storage: ^9.2.2
 
-  # Localization
-  intl: ^0.20.2
-  flutter_localizations:
-    sdk: flutter
-
   # Media (lip-reading + voice)
   camera: ^0.11.0+2
 
   # Utils
   equatable: ^2.0.5
+
 
 
 dev_dependencies:

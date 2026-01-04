@@ -14,6 +14,13 @@ class TokenStorage {
     return _storage.read(key: StorageKeys.accessToken);
   }
 
+  // =====================
+  // Helper for UI / Chat
+  // =====================
+  Future<String?> getToken() async {
+    return readAccessToken();
+  }
+
   Future<void> clear() async {
     await _storage.delete(key: StorageKeys.accessToken);
     await _storage.delete(key: StorageKeys.refreshToken);

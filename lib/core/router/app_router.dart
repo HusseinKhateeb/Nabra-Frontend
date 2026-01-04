@@ -13,7 +13,8 @@ import '../../features/auth/presentation/splash_page.dart';
 import '../../features/home/presentation/home_page.dart';
 import '../../features/lip_reading/presentation/lip_reading_page.dart';
 import '../../features/sessions/presentation/sessions_page.dart';
-import '../../features/chat/presentation/chat_page.dart';
+import '../../features/chat/presentation/chats_list_page.dart';
+
 import '../../features/dictionary/presentation/dictionary_page.dart';
 import '../../features/learning/presentation/learning_page.dart';
 import '../../features/admin/presentation/admin_page.dart';
@@ -59,8 +60,8 @@ final GoRouter appRouter = GoRouter(
       builder: (context, state) => const SessionsPage(),
     ),
     GoRoute(
-      path: AppRoutes.chat,
-      builder: (context, state) => const ChatPage(),
+      path: AppRoutes.chats,
+      builder: (context, state) => const ChatsListPage(),
     ),
     GoRoute(
       path: AppRoutes.dictionary,

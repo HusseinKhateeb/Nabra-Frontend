@@ -8,7 +8,7 @@ class AppRoutes {
   static const instructions = '/instructions';
   static const lipReading = '/lip-reading';
   static const sessions = '/sessions';
-  static const chat = '/chat';
+  static const chats = '/chats';
   static const dictionary = '/dictionary';
   static const learning = '/learning';
   static const admin = '/admin';
