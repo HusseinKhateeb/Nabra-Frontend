@@ -19,6 +19,10 @@ class ChatRepository {
     required String text,
   }) =>
       api.sendTextMessage(chatId: chatId, text: text);
+  Future<ChatModel> createChat({
+    required String participantUserId,
+  }) =>
+      api.createChat(participantUserId);
 
   // ================= Send VOICE (✅ FIXED) =================
   Future<void> sendVoiceMessage({

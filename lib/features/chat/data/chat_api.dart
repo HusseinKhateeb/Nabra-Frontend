@@ -40,6 +40,17 @@ class ChatApi {
     );
   }
 
+  Future<ChatModel> createChat(String userId) async {
+    final res = await dio.post(
+      '/v1/chats',
+      data: {
+        "groupChat": false,
+        "participantUserIds": [userId],
+      },
+    );
+    return ChatModel.fromJson(res.data);
+  }
+
   // ================= Send VOICE =================
   Future<void> sendVoiceMessage({
     required String chatId,

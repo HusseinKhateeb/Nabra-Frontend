@@ -6,6 +6,7 @@ import 'widgets/chat_tile.dart';
 import '../../../core/providers.dart';
 import 'chat_room_page.dart';
 import '../../../core/widgets/main_bottom_nav_bar.dart';
+import 'new_chat_page.dart'; // ✅ جديد
 
 class ChatsListPage extends ConsumerStatefulWidget {
   const ChatsListPage({super.key});
@@ -40,7 +41,7 @@ class _ChatsListPageState extends ConsumerState<ChatsListPage> {
     final tokenStorage = ref.watch(tokenStorageProvider);
 
     return Scaffold(
-      extendBody: true, // 🔥 مهم جدًا لزر الكاميرا
+      extendBody: true,
       backgroundColor: const Color(0xFFF7F7F7),
 
       // ================= AppBar =================
@@ -134,7 +135,7 @@ class _ChatsListPageState extends ConsumerState<ChatsListPage> {
                     }
 
                     return ListView.separated(
-                      padding: const EdgeInsets.only(bottom: 96),
+                      padding: const EdgeInsets.only(bottom: 120),
                       itemCount: filteredChats.length,
                       separatorBuilder: (_, __) =>
                           const Divider(height: 0, indent: 72),
@@ -164,7 +165,7 @@ class _ChatsListPageState extends ConsumerState<ChatsListPage> {
                               ),
                             );
 
-                            // ✅ تحديث العداد بعد الرجوع
+                            // ✅ تحديث القائمة بعد الرجوع
                             ref
                                 .read(chatsListControllerProvider.notifier)
                                 .loadChats();
@@ -178,6 +179,20 @@ class _ChatsListPageState extends ConsumerState<ChatsListPage> {
             ),
           ),
         ],
+      ),
+
+      // ================= زر بدء محادثة جديدة =================
+      floatingActionButton: FloatingActionButton(
+        backgroundColor: Colors.red,
+        child: const Icon(Icons.chat, color: Colors.white),
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => const NewChatPage(),
+            ),
+          );
+        },
       ),
 
       // ================= Bottom Nav =================
