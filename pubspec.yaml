@@ -9,7 +9,8 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-
+  record: ^5.0.4
+  path_provider: ^2.1.2
   # Realtime chat
   stomp_dart_client: ^1.0.1
 
