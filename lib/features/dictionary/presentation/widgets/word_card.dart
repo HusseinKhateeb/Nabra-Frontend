@@ -33,9 +33,7 @@ class _WordCardState extends ConsumerState<WordCard> {
       _controller = VideoPlayerController.networkUrl(
         Uri.parse('$baseUrl${widget.word.videoUrl}'),
       )..initialize().then((_) {
-          if (mounted) {
-            setState(() {});
-          }
+          if (mounted) setState(() {});
         });
     }
   }
@@ -48,31 +46,34 @@ class _WordCardState extends ConsumerState<WordCard> {
 
   @override
   Widget build(BuildContext context) {
+    final hasVideo = _controller != null;
+
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08),
+            color: Colors.black.withOpacity(0.05),
             blurRadius: 8,
           ),
         ],
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           /// 🎥 Video
-          Expanded(
-            child: ClipRRect(
-              borderRadius:
-                  const BorderRadius.vertical(top: Radius.circular(16)),
-              child: _controller != null && _controller!.value.isInitialized
+          ClipRRect(
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+            child: AspectRatio(
+              aspectRatio: 1,
+              child: (hasVideo && _controller!.value.isInitialized)
                   ? Stack(
                       alignment: Alignment.center,
                       children: [
                         VideoPlayer(_controller!),
                         IconButton(
-                          iconSize: 48,
+                          iconSize: 54,
                           color: Colors.white,
                           icon: Icon(
                             _controller!.value.isPlaying
@@ -89,62 +90,74 @@ class _WordCardState extends ConsumerState<WordCard> {
                         ),
                       ],
                     )
-                  : const Center(
+                  : Container(
+                      color: Colors.grey.shade200,
+                      alignment: Alignment.center,
                       child: Icon(
-                        Icons.videocam,
-                        size: 48,
-                        color: Colors.grey,
+                        hasVideo ? Icons.play_circle_fill : Icons.videocam,
+                        size: 54,
+                        color: hasVideo ? Colors.red : Colors.grey,
                       ),
                     ),
             ),
           ),
 
-          /// 📝 Info
+          /// 📝 Text + Favorite
           Padding(
-            padding: const EdgeInsets.all(12),
-            child: Column(
+            padding: const EdgeInsets.fromLTRB(10, 10, 10, 6),
+            child: Row(
               children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        widget.word.text,
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                    IconButton(
-                      icon: Icon(
-                        widget.word.favorite ? Icons.star : Icons.star_border,
-                        color: Colors.red,
-                      ),
-                      onPressed: () async {
-                        await ref.read(
-                          toggleFavoriteProvider(widget.word).future,
-                        );
-
-                        if (!mounted) return;
-
-                        setState(() {
-                          widget.word.favorite = !widget.word.favorite;
-                        });
-
-                        ref.invalidate(
-                          wordsProvider(widget.categoryId),
-                        );
-                      },
-                    ),
-                  ],
+                Expanded(
+                  child: Text(
+                    widget.word.text,
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  widget.word.description,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(fontSize: 14),
+                GestureDetector(
+                  onTap: () async {
+                    final newValue = await ref
+                        .read(toggleFavoriteProvider(widget.word).future);
+
+                    if (!mounted) return;
+
+                    setState(() {
+                      widget.word.favorite = newValue;
+                    });
+
+                    // تحديث قائمة الكلمات
+                    ref.invalidate(wordsProvider(widget.categoryId));
+                  },
+                  child: Icon(
+                    widget.word.favorite
+                        ? Icons.star
+                        : Icons.star_border_outlined,
+                    color: Colors.red,
+                  ),
                 ),
               ],
+            ),
+          ),
+
+          /// 🧾 Description
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 10),
+            child: Text(
+              widget.word.description,
+              style: TextStyle(
+                color: Colors.grey.shade600,
+                fontSize: 12,
+              ),
+            ),
+          ),
+
+          const Spacer(),
+
+          /// 🔴 Bottom bar
+          Container(
+            height: 6,
+            decoration: const BoxDecoration(
+              color: Color(0xFFE53935),
+              borderRadius: BorderRadius.vertical(bottom: Radius.circular(16)),
             ),
           ),
         ],

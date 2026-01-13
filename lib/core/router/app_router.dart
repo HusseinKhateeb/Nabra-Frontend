@@ -12,7 +12,7 @@ import '../../features/chat/presentation/chat_page.dart';
 import '../../features/dictionary/presentation/dictionary_page.dart';
 =======
 import '../../features/chat/presentation/chats_list_page.dart';
-
+import '../../features/dictionary/presentation/pages/favorites_page.dart';
 import '../../features/dictionary/presentation/pages/dictionary_page.dart';
 >>>>>>> 8fe1ec9... feat : dictionary
 import '../../features/learning/presentation/learning_page.dart';
@@ -59,6 +59,17 @@ final GoRouter appRouter = GoRouter(
       builder: (context, state) => const LearningPage(),
     ),
     GoRoute(
+<<<<<<< HEAD
+=======
+      path: AppRoutes.forgotPassword,
+      builder: (context, state) => const ForgotPasswordPage(),
+    ),
+    GoRoute(
+      path: AppRoutes.favorites,
+      builder: (context, state) => const FavoritesPage(),
+    ),
+    GoRoute(
+>>>>>>> 72f1348... edit on dicitonary
       path: AppRoutes.admin,
       builder: (context, state) => const AdminPage(),
     ),
