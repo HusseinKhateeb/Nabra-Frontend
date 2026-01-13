@@ -15,6 +15,18 @@ class ApiEndpoints {
   static const String learning = '/learning';
   static const String smartPrediction = '/predictions';
 
+<<<<<<< HEAD
   static const String reports = '/reports';
   static const String adminReports = '/admin/reports';
+=======
+  static const String chats = '/v1/chats';
+  static const String messages = '/v1/messages';
+  static const String dictionary = '/visual-dictionary';
+
+  static const String learning = '/v1/learning';
+  static const String smartPrediction = '/v1/predictions';
+
+  static const String reports = '/v1/reports';
+  static const String adminReports = '/v1/admin/reports';
+>>>>>>> 8fe1ec9... feat : dictionary
 }
