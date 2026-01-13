@@ -12,6 +12,7 @@ class AppRoutes {
   static const dictionary = '/dictionary';
   static const learning = '/learning';
   static const admin = '/admin';
+  static const favorites = '/favorites';
 
   // 🔐 Auth – Forgot password flow
   static const forgotPassword = '/forgot-password';
