@@ -9,38 +9,42 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+
+  # 🎙️ Audio recording
   record: ^5.0.4
   path_provider: ^2.1.2
-  # Realtime chat
+
+  # 💬 Realtime chat
   stomp_dart_client: ^1.0.1
 
-  # Localization & dates
+  # 🌍 Localization & dates
   intl: ^0.20.2
   flutter_localizations:
     sdk: flutter
 
-  # Auth
+  # 🔐 Auth
   google_sign_in: ^6.2.1
 
-  # Networking
+  # 🌐 Networking
   dio: ^5.7.0
 
-  # State management
+  # 🧠 State management
   flutter_riverpod: ^2.6.1
 
-  # Routing
+  # 🧭 Routing
   go_router: ^14.6.2
 
-  # Secure token storage
+  # 🔒 Secure token storage
   flutter_secure_storage: ^9.2.2
 
-  # Media (lip-reading + voice)
+  # 📷 Media (lip-reading + voice)
   camera: ^0.11.0+2
 
-  # Utils
+  # 🧰 Utils
   equatable: ^2.0.5
 
-
+  # ▶️ VIDEO PLAYER (ضروري للقاموس البصري)
+  video_player: ^2.8.2
 
 dev_dependencies:
   flutter_test:
@@ -49,6 +53,7 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+
   assets:
     - assets/images/
     - assets/icons/
@@ -56,4 +61,3 @@ flutter:
 
   # Enable Flutter's gen-l10n (you can add arb files later)
   generate: true
-

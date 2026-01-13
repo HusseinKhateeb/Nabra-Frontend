@@ -17,8 +17,8 @@ class ApiEndpoints {
 
   static const String chats = '/v1/chats';
   static const String messages = '/v1/messages';
+  static const String dictionary = '/visual-dictionary';
 
-  static const String dictionary = '/v1/dictionary';
   static const String learning = '/v1/learning';
   static const String smartPrediction = '/v1/predictions';
 
