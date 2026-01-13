@@ -9,8 +9,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-<<<<<<< HEAD
-=======
+
 
   # 🎙️ Audio recording
   record: ^5.0.4
@@ -26,7 +25,7 @@ dependencies:
 
   # 🔐 Auth
   google_sign_in: ^6.2.1
->>>>>>> 8fe1ec9... feat : dictionary
+
 
   # 🌐 Networking
   dio: ^5.7.0
@@ -40,26 +39,26 @@ dependencies:
   # 🔒 Secure token storage
   flutter_secure_storage: ^9.2.2
 
-<<<<<<< HEAD
+
   # Localization
   intl: ^0.19.0
   flutter_localizations:
     sdk: flutter
 
   # Media (lip-reading + voice)
-=======
+
   # 📷 Media (lip-reading + voice)
->>>>>>> 8fe1ec9... feat : dictionary
+
   camera: ^0.11.0+2
 
   # 🧰 Utils
   equatable: ^2.0.5
 
-<<<<<<< HEAD
-=======
+
+
   # ▶️ VIDEO PLAYER (ضروري للقاموس البصري)
   video_player: ^2.8.2
->>>>>>> 8fe1ec9... feat : dictionary
+
 
 dev_dependencies:
   flutter_test:
