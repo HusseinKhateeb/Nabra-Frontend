@@ -18,6 +18,7 @@ import '../../features/dictionary/presentation/pages/favorites_page.dart';
 import '../../features/dictionary/presentation/pages/dictionary_page.dart';
 import '../../features/learning/presentation/learning_page.dart';
 import '../../features/admin/presentation/admin_page.dart';
+import '../../features/profile/presentation/profile_page.dart';
 import 'app_routes.dart';
 
 final GoRouter appRouter = GoRouter(
@@ -82,6 +83,10 @@ final GoRouter appRouter = GoRouter(
     GoRoute(
       path: AppRoutes.admin,
       builder: (context, state) => const AdminPage(),
+    ),
+    GoRoute(
+      path: AppRoutes.profile,
+      builder: (context, state) => const ProfilePage(),
     ),
     GoRoute(
       path: AppRoutes.verifyResetCode,
