@@ -15,6 +15,10 @@ class ApiEndpoints {
   static const String learning = '/learning';
   static const String smartPrediction = '/predictions';
 
+  static const String lipReadingInfer = '/v1/lipreading/infer';
+  static const String lipReadingAvsrFuse = '/v1/lipreading/avsr/fuse';
+  static const String lipReadingAvsrFuseFiles = '/v1/lipreading/avsr/fuse-files';
+
   static const String reports = '/reports';
   static const String adminReports = '/admin/reports';
 }
