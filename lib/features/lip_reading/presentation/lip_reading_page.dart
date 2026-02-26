@@ -240,37 +240,41 @@ class _LipReadingPageState extends ConsumerState<LipReadingPage> {
                 ),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(24),
-                  child: AspectRatio(
-                    aspectRatio: 9 / 16,
-                    child: _initializing
-                        ? Container(
-                            color: _grey,
-                            child: const Center(
-                              child: CircularProgressIndicator(
-                                valueColor: AlwaysStoppedAnimation<Color>(_darkRed),
-                              ),
+                  child: _initializing
+                      ? Container(
+                          color: _grey,
+                          child: const Center(
+                            child: CircularProgressIndicator(
+                              valueColor: AlwaysStoppedAnimation<Color>(_darkRed),
                             ),
-                          )
-                        : (_controller == null
-                            ? Container(
-                                color: _grey,
-                                child: const Center(
-                                  child: Icon(Icons.camera_alt, color: _darkRed, size: 48),
+                          ),
+                        )
+                      : (_controller == null
+                          ? Container(
+                              color: _grey,
+                              child: const Center(
+                                child: Icon(Icons.camera_alt, color: _darkRed, size: 48),
+                              ),
+                            )
+                          : Center(
+                              child: AspectRatio(
+                                aspectRatio: 3/4, // Typical phone camera ratio
+                                child: ClipRect(
+                                  child: Stack(
+                                    fit: StackFit.expand,
+                                    children: [
+                                      CameraPreview(_controller!),
+                                      if (_isCapturing)
+                                        Container(
+                                          decoration: BoxDecoration(
+                                            border: Border.all(color: _darkRed, width: 4),
+                                          ),
+                                        ),
+                                    ],
+                                  ),
                                 ),
-                              )
-                            : Stack(
-                                fit: StackFit.expand,
-                                children: [
-                                  CameraPreview(_controller!),
-                                  if (_isCapturing)
-                                    Container(
-                                      decoration: BoxDecoration(
-                                        border: Border.all(color: _darkRed, width: 4),
-                                      ),
-                                    ),
-                                ],
-                              )),
-                  ),
+                              ),
+                            )),
                 ),
               ),
               const SizedBox(height: 24),
