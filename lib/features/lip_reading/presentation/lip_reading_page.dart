@@ -32,8 +32,13 @@ class _LipReadingPageState extends ConsumerState<LipReadingPage> {
   bool _isCapturing = false;
   String _captureStatus = 'Ready';
 
+  bool get _isSupportedPlatform {
+    return kIsWeb ||
+        defaultTargetPlatform == TargetPlatform.android ||
+        defaultTargetPlatform == TargetPlatform.iOS;
+  }
+
   bool get _isMobilePlatform {
-    if (kIsWeb) return false;
     return defaultTargetPlatform == TargetPlatform.android ||
         defaultTargetPlatform == TargetPlatform.iOS;
   }
@@ -41,7 +46,7 @@ class _LipReadingPageState extends ConsumerState<LipReadingPage> {
   @override
   void initState() {
     super.initState();
-    if (!_isMobilePlatform) {
+    if (!_isSupportedPlatform) {
       _initializing = false;
       return;
     }
@@ -92,19 +97,6 @@ class _LipReadingPageState extends ConsumerState<LipReadingPage> {
       return;
     }
 
-    final bool hasPermission = await _audioRecorder.hasPermission();
-    if (!hasPermission) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Microphone permission is required.')),
-      );
-      return;
-    }
-
-    final Directory tempDir = await getTemporaryDirectory();
-    final String audioPath =
-        '${tempDir.path}/audio-${DateTime.now().millisecondsSinceEpoch}.m4a';
-
     ref.read(lipReadingControllerProvider.notifier).clearResult();
     setState(() {
       _isCapturing = true;
@@ -116,53 +108,119 @@ class _LipReadingPageState extends ConsumerState<LipReadingPage> {
     final DateTime startedAt = DateTime.now();
 
     try {
-      await _audioRecorder.start(const RecordConfig(), path: audioPath);
-      setState(() {
-        _captureStatus = 'Collecting video frames (1s) + audio (2s)...';
-      });
+      if (kIsWeb) {
+        // Web: Only record video
+        await camera.startVideoRecording();
+        await Future<void>.delayed(const Duration(seconds: 2));
+        recordedVideo = await camera.stopVideoRecording();
 
-      await camera.startVideoRecording();
-      await Future<void>.delayed(const Duration(seconds: 1));
-      recordedVideo = await camera.stopVideoRecording();
+        if (mounted) {
+          setState(() {
+            _captureStatus = 'Uploading to backend...';
+          });
+        }
 
-      if (mounted) {
-        setState(() {
-          _captureStatus = 'Video captured. Continuing audio to 2s...';
-        });
-      }
+        // Check video file
+        if (recordedVideo.path.isEmpty) {
+          setState(() {
+            _isCapturing = false;
+            _captureStatus = 'Video recording failed.';
+          });
+          return;
+        }
 
-      final int elapsedMs = DateTime.now().difference(startedAt).inMilliseconds;
-      final int remainingAudioMs = 2000 - elapsedMs;
-      if (remainingAudioMs > 0) {
-        await Future<void>.delayed(Duration(milliseconds: remainingAudioMs));
-      }
-
-      recordedAudio = await _audioRecorder.stop();
-
-      if (mounted) {
-        setState(() {
-          _captureStatus = 'Uploading to backend...';
-        });
-      }
-
-      if (recordedAudio == null) {
-        throw Exception('Recording failed. Please try again.');
-      }
-
-      await ref.read(lipReadingControllerProvider.notifier).runAvsrFusion(
-            audioFile: File(recordedAudio),
-            videoFile: File(recordedVideo.path),
-            topK: 5,
+        // Print video file details for debugging
+        final videoFile = File(recordedVideo.path);
+        final videoExists = await videoFile.exists();
+        final videoSize = videoExists ? await videoFile.length() : 0;
+        debugPrint('Uploading videoFile: path=${videoFile.path}, size=${videoSize} bytes, ext=${videoFile.path.split('.').last}');
+        await ref.read(lipReadingControllerProvider.notifier).runAvsrFusion(
+          audioFile: null, // No audio file for web
+          videoFile: videoFile,
+          topK: 5,
+        );
+      } else {
+        // Mobile: Record audio and video
+        final bool hasPermission = await _audioRecorder.hasPermission();
+        if (!hasPermission) {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Microphone permission is required.')),
           );
+          return;
+        }
+
+        final Directory tempDir = await getTemporaryDirectory();
+        final String audioPath =
+            '${tempDir.path}/audio-${DateTime.now().millisecondsSinceEpoch}.m4a';
+
+        await _audioRecorder.start(const RecordConfig(), path: audioPath);
+        setState(() {
+          _captureStatus = 'Collecting video frames (1s) + audio (2s)...';
+        });
+
+        await camera.startVideoRecording();
+        await Future<void>.delayed(const Duration(seconds: 1));
+        recordedVideo = await camera.stopVideoRecording();
+
+        if (mounted) {
+          setState(() {
+            _captureStatus = 'Video captured. Continuing audio to 2s...';
+          });
+        }
+
+        final int elapsedMs = DateTime.now().difference(startedAt).inMilliseconds;
+        final int remainingAudioMs = 2000 - elapsedMs;
+        if (remainingAudioMs > 0) {
+          await Future<void>.delayed(Duration(milliseconds: remainingAudioMs));
+        }
+
+        recordedAudio = await _audioRecorder.stop();
+
+        if (mounted) {
+          setState(() {
+            _captureStatus = 'Uploading to backend...';
+          });
+        }
+
+        // Check audio file
+        if (recordedAudio == null || recordedAudio.isEmpty) {
+          setState(() {
+            _isCapturing = false;
+            _captureStatus = 'Audio recording failed.';
+          });
+          return;
+        }
+        // Check video file
+        if (recordedVideo.path.isEmpty || !(await File(recordedVideo.path).exists())) {
+          setState(() {
+            _isCapturing = false;
+            _captureStatus = 'Video recording failed.';
+          });
+          return;
+        }
+
+        final audioFile = File(recordedAudio);
+        final videoFile = File(recordedVideo.path);
+        debugPrint('Uploading audioFile: path=${audioFile.path}, size=${await audioFile.length()} bytes, ext=${audioFile.path.split('.').last}');
+        debugPrint('Uploading videoFile: path=${videoFile.path}, size=${await videoFile.length()} bytes, ext=${videoFile.path.split('.').last}');
+        await ref.read(lipReadingControllerProvider.notifier).runAvsrFusion(
+          audioFile: audioFile,
+          videoFile: videoFile,
+          topK: 5,
+        );
+      }
 
       if (!mounted) return;
       setState(() {
         _captureStatus = 'Done';
       });
     } catch (e) {
-      await _audioRecorder.stop();
-      if (camera.value.isRecordingVideo) {
-        await camera.stopVideoRecording();
+      if (!kIsWeb) {
+        await _audioRecorder.stop();
+        if (camera.value.isRecordingVideo) {
+          await camera.stopVideoRecording();
+        }
       }
       if (!mounted) return;
       setState(() {
@@ -192,7 +250,7 @@ class _LipReadingPageState extends ConsumerState<LipReadingPage> {
     final AsyncValue<AvsrFusionResponse?> state = ref.watch(lipReadingControllerProvider);
     final bool uploading = state.isLoading || _isCapturing;
 
-    if (!_isMobilePlatform) {
+    if (!_isSupportedPlatform) {
       return Scaffold(
         backgroundColor: Colors.white,
         appBar: AppBar(
@@ -204,7 +262,7 @@ class _LipReadingPageState extends ConsumerState<LipReadingPage> {
           child: Padding(
             padding: EdgeInsets.all(24),
             child: Text(
-              'This feature is available on Android and iOS only.',
+              'This feature is available only on Android, iOS, and Web.',
               textAlign: TextAlign.center,
               style: TextStyle(color: _darkRed, fontSize: 16),
             ),

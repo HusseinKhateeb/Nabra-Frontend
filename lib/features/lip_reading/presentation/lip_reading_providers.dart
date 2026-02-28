@@ -28,7 +28,7 @@ class LipReadingController extends StateNotifier<AsyncValue<AvsrFusionResponse?>
   final LipReadingRepository _repo;
 
   Future<void> runAvsrFusion({
-    required File audioFile,
+    File? audioFile,
     required File videoFile,
     int topK = 5,
   }) async {

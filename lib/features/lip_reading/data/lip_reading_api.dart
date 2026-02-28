@@ -12,21 +12,24 @@ class LipReadingApi {
   final DioClient _client;
 
   Future<AvsrFusionResponse> fuseFiles({
-    required File audioFile,
+    File? audioFile,
     required File videoFile,
     int topK = 5,
   }) async {
-    final FormData formData = FormData.fromMap({
-      'audioFile': await MultipartFile.fromFile(
-        audioFile.path,
-        filename: audioFile.uri.pathSegments.last,
-      ),
+    final Map<String, dynamic> data = {
       'videoFile': await MultipartFile.fromFile(
         videoFile.path,
         filename: videoFile.uri.pathSegments.last,
       ),
       'topK': topK,
-    });
+    };
+    if (audioFile != null) {
+      data['audioFile'] = await MultipartFile.fromFile(
+        audioFile.path,
+        filename: audioFile.uri.pathSegments.last,
+      );
+    }
+    final FormData formData = FormData.fromMap(data);
 
     final Response<dynamic> res = await _client.dio.post(
       ApiEndpoints.lipReadingAvsrFuseFiles,

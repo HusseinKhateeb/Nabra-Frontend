@@ -9,7 +9,7 @@ class LipReadingRepository {
   final LipReadingApi _api;
 
   Future<AvsrFusionResponse> fuseFiles({
-    required File audioFile,
+    File? audioFile,
     required File videoFile,
     int topK = 5,
   }) {
