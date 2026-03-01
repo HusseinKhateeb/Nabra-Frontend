@@ -17,6 +17,10 @@ const Color _black = Color(0xFF222222);
 const Color _grey = Color(0xFFEEEEEE);
 const Color _cardBg = Color(0xFFF8F8F8);
 
+const int _videoCaptureDurationMs = 1000;
+const int _audioCaptureDurationMs = 2000;
+const double _estimatedCaptureFps = 30;
+
 class LipReadingPage extends ConsumerStatefulWidget {
   const LipReadingPage({super.key});
 
@@ -63,9 +67,14 @@ class _LipReadingPageState extends ConsumerState<LipReadingPage> {
       final controller = CameraController(
         front,
         ResolutionPreset.medium,
-        enableAudio: true,
+        enableAudio: false,
       );
       await controller.initialize();
+      try {
+        await controller.prepareForVideoRecording();
+      } catch (_) {
+        // Some devices/platforms may not require or support this optimization.
+      }
       if (!mounted) return;
       setState(() {
         _controller = controller;
@@ -137,21 +146,24 @@ class _LipReadingPageState extends ConsumerState<LipReadingPage> {
 
         await _audioRecorder.start(const RecordConfig(), path: audioPath);
         setState(() {
-          _captureStatus = 'Collecting video frames (1s) + audio (2s)...';
+          _captureStatus = 'Collecting video ($_videoCaptureDurationMs ms) + audio ($_audioCaptureDurationMs ms)...';
         });
 
+        final DateTime videoStartedAt = DateTime.now();
         await camera.startVideoRecording();
-        await Future<void>.delayed(const Duration(seconds: 1));
+        await Future<void>.delayed(const Duration(milliseconds: _videoCaptureDurationMs));
         recordedVideo = await camera.stopVideoRecording();
+        final int actualVideoDurationMs = DateTime.now().difference(videoStartedAt).inMilliseconds;
+        final int estimatedFramesSent = ((actualVideoDurationMs / 1000) * _estimatedCaptureFps).round();
 
         if (mounted) {
           setState(() {
-            _captureStatus = 'Video captured. Continuing audio to 2s...';
+            _captureStatus = 'Video captured (~$estimatedFramesSent frames). Continuing audio...';
           });
         }
 
         final int elapsedMs = DateTime.now().difference(startedAt).inMilliseconds;
-        final int remainingAudioMs = 2000 - elapsedMs;
+        final int remainingAudioMs = _audioCaptureDurationMs - elapsedMs;
         if (remainingAudioMs > 0) {
           await Future<void>.delayed(Duration(milliseconds: remainingAudioMs));
         }
@@ -182,9 +194,14 @@ class _LipReadingPageState extends ConsumerState<LipReadingPage> {
         }
 
         final audioFile = File(recordedAudio);
-        // Rename video file to .mp4 for backend compatibility
+        // Keep mp4 name for backend compatibility; try fast rename first.
         final mp4VideoPath = '${tempDir.path}/video-${DateTime.now().millisecondsSinceEpoch}.mp4';
-        final videoFile = await File(recordedVideo.path).copy(mp4VideoPath);
+        File videoFile;
+        try {
+          videoFile = await File(recordedVideo.path).rename(mp4VideoPath);
+        } catch (_) {
+          videoFile = await File(recordedVideo.path).copy(mp4VideoPath);
+        }
         final audioExists = await audioFile.exists();
         final videoExists = await videoFile.exists();
         final audioSize = audioExists ? await audioFile.length() : 0;
@@ -193,6 +210,7 @@ class _LipReadingPageState extends ConsumerState<LipReadingPage> {
         final videoExt = videoFile.path.split('.').last;
         debugPrint('Audio file: path=${audioFile.path}, exists=$audioExists, size=${audioSize} bytes, ext=$audioExt');
         debugPrint('Video file: path=${videoFile.path}, exists=$videoExists, size=${videoSize} bytes, ext=$videoExt');
+        debugPrint('Estimated frames sent to backend: ~$estimatedFramesSent (capture=${actualVideoDurationMs}ms, estFPS=$_estimatedCaptureFps)');
         await ref.read(lipReadingControllerProvider.notifier).runAvsrFusion(
           audioFile: audioFile,
           videoFile: videoFile,
