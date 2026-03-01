@@ -139,18 +139,43 @@ class LipReadingApi {
 
     if (body is String) {
       final String trimmed = body.trim();
-      try {
-        final dynamic decoded = jsonDecode(trimmed);
-        if (decoded is Map<String, dynamic>) {
-          return AvsrFusionResponse.fromJson(decoded);
-        }
-      } catch (_) {
-        // fall through to raw-output fallback model
+      final Map<String, dynamic>? decoded = _tryDecodeJsonObjectFromText(trimmed);
+      if (decoded != null) {
+        return AvsrFusionResponse.fromJson(decoded);
       }
 
       return AvsrFusionResponse.fromRawOutput(trimmed);
     }
 
     return AvsrFusionResponse.fromRawOutput(body?.toString() ?? '');
+  }
+
+  Map<String, dynamic>? _tryDecodeJsonObjectFromText(String text) {
+    if (text.isEmpty) return null;
+
+    try {
+      final dynamic direct = jsonDecode(text);
+      if (direct is Map<String, dynamic>) {
+        return direct;
+      }
+    } catch (_) {
+      // Try extracting JSON suffix from mixed logs + JSON content.
+    }
+
+    int start = text.indexOf('{');
+    while (start != -1) {
+      final String candidate = text.substring(start).trim();
+      try {
+        final dynamic decoded = jsonDecode(candidate);
+        if (decoded is Map<String, dynamic>) {
+          return decoded;
+        }
+      } catch (_) {
+        // Move to next possible JSON object start.
+      }
+      start = text.indexOf('{', start + 1);
+    }
+
+    return null;
   }
 }

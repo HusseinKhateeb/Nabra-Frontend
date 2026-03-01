@@ -521,6 +521,14 @@ class _ResultSection extends StatelessWidget {
           );
         }
 
+        final topFivePredictions = response.lipTopPredictions.take(5).toList();
+        final double finalConfidence = topFivePredictions.isNotEmpty
+          ? topFivePredictions.first.confidence
+          : response.lipConfidence;
+        final String finalConfidenceText = finalConfidence <= 1
+          ? '${(finalConfidence * 100).toStringAsFixed(1)}%'
+          : '${finalConfidence.toStringAsFixed(1)}%';
+
         return Container(
           decoration: BoxDecoration(
             gradient: LinearGradient(
@@ -565,7 +573,7 @@ class _ResultSection extends StatelessWidget {
               ),
               const SizedBox(height: 24),
               
-              // Final word
+              // Final result + confidence
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(20),
@@ -577,7 +585,7 @@ class _ResultSection extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'DETECTED WORD',
+                      'FINAL RESULT',
                       style: TextStyle(
                         color: Colors.white.withOpacity(0.7),
                         fontSize: 12,
@@ -595,12 +603,27 @@ class _ResultSection extends StatelessWidget {
                         letterSpacing: 0.5,
                       ),
                     ),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        const Icon(Icons.verified, color: Colors.white, size: 18),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Confidence: $finalConfidenceText',
+                          style: TextStyle(
+                            color: Colors.white.withOpacity(0.9),
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
                   ],
                 ),
               ),
               const SizedBox(height: 20),
               
-              // Fusion details
+              // Audio result
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -610,36 +633,22 @@ class _ResultSection extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _DetailRow(label: 'Lip Word', value: response.matchedLipWord),
-                    const SizedBox(height: 8),
-                    _DetailRow(label: 'Audio Text', value: response.audioText),
-                    const SizedBox(height: 8),
-                    _DetailRow(label: 'Similarity', value: response.similarity.toStringAsFixed(3)),
-                    const SizedBox(height: 8),
-                    _DetailRow(label: 'Confidence', value: response.lipConfidence.toStringAsFixed(3)),
-                    const SizedBox(height: 12),
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: _darkRed.withOpacity(0.08),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: _darkRed.withOpacity(0.15)),
+                    Text(
+                      'AUDIO RESULT',
+                      style: TextStyle(
+                        color: _darkRed,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 1.2,
                       ),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.info_outline, color: _darkRed, size: 16),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              response.fusionReason,
-                              style: TextStyle(
-                                color: _black.withOpacity(0.9),
-                                fontSize: 12,
-                                fontStyle: FontStyle.italic,
-                              ),
-                            ),
-                          ),
-                        ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      response.audioText.isNotEmpty ? response.audioText : 'No audio text returned',
+                      style: TextStyle(
+                        color: _black.withOpacity(0.9),
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                   ],
@@ -647,9 +656,9 @@ class _ResultSection extends StatelessWidget {
               ),
               const SizedBox(height: 20),
               
-              // Top predictions
+              // Top 5 predictions
               Text(
-                'TOP PREDICTIONS',
+                'TOP 5 PREDICTIONS',
                 style: TextStyle(
                   color: _darkRed,
                   fontSize: 12,
@@ -658,7 +667,23 @@ class _ResultSection extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 12),
-              ...response.lipTopPredictions.asMap().entries.map((entry) {
+              if (topFivePredictions.isEmpty)
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: _grey,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    'No top predictions returned.',
+                    style: TextStyle(
+                      color: _black.withOpacity(0.7),
+                      fontSize: 14,
+                    ),
+                  ),
+                ),
+              ...topFivePredictions.asMap().entries.map((entry) {
                 final index = entry.key;
                 final pred = entry.value;
                 return Padding(

@@ -14,6 +14,22 @@ class AvsrTopPrediction {
       confidence: confidenceRaw is num ? confidenceRaw.toDouble() : 0,
     );
   }
+
+  static AvsrTopPrediction? fromDynamic(dynamic value) {
+    if (value is Map<String, dynamic>) {
+      return AvsrTopPrediction.fromJson(value);
+    }
+
+    if (value is List && value.length >= 2) {
+      final dynamic wordRaw = value[0];
+      final dynamic confRaw = value[1];
+      final String word = wordRaw?.toString().trim() ?? '';
+      final double confidence = confRaw is num ? confRaw.toDouble() : 0;
+      return AvsrTopPrediction(word: word, confidence: confidence);
+    }
+
+    return null;
+  }
 }
 
 class AvsrFusionResponse {
@@ -50,22 +66,38 @@ class AvsrFusionResponse {
 
   factory AvsrFusionResponse.fromJson(Map<String, dynamic> json) {
     final List<dynamic> predictionsRaw =
-        (json['lipTopPredictions'] as List<dynamic>?) ?? <dynamic>[];
+      (json['lipTopPredictions'] as List<dynamic>?) ??
+      (json['lip_top'] as List<dynamic>?) ??
+      <dynamic>[];
 
     final dynamic similarityRaw = json['similarity'];
-    final dynamic lipConfidenceRaw = json['lipConfidence'];
+    final dynamic fusedConfidenceRaw = json['fused_conf'];
+    final dynamic lipConfidenceRaw = json['lipConfidence'] ?? json['lip_conf'];
+
+    final String finalWord =
+      ((json['finalWord'] ?? json['fused_word']) as String?)?.trim() ?? '';
+    final String matchedLipWord =
+      ((json['matchedLipWord'] ?? json['lip_word']) as String?)?.trim() ?? '';
+    final String audioText =
+      ((json['audioText'] ?? json['audio_text']) as String?)?.trim() ?? '';
+
+    final double finalConfidence = fusedConfidenceRaw is num
+      ? fusedConfidenceRaw.toDouble()
+      : (lipConfidenceRaw is num ? lipConfidenceRaw.toDouble() : 0);
+
+    final List<AvsrTopPrediction> topPredictions = predictionsRaw
+      .map(AvsrTopPrediction.fromDynamic)
+      .whereType<AvsrTopPrediction>()
+      .toList();
 
     return AvsrFusionResponse(
-      finalWord: (json['finalWord'] as String?)?.trim() ?? '',
-      matchedLipWord: (json['matchedLipWord'] as String?)?.trim() ?? '',
-      audioText: (json['audioText'] as String?)?.trim() ?? '',
+      finalWord: finalWord,
+      matchedLipWord: matchedLipWord,
+      audioText: audioText,
       similarity: similarityRaw is num ? similarityRaw.toDouble() : 0,
-      lipConfidence: lipConfidenceRaw is num ? lipConfidenceRaw.toDouble() : 0,
-      lipTopPredictions: predictionsRaw
-          .whereType<Map<String, dynamic>>()
-          .map(AvsrTopPrediction.fromJson)
-          .toList(),
-      fusionReason: (json['fusionReason'] as String?)?.trim() ?? '',
+      lipConfidence: finalConfidence,
+      lipTopPredictions: topPredictions,
+      fusionReason: ((json['fusionReason'] ?? json['fusion_reason']) as String?)?.trim() ?? '',
     );
   }
 }
