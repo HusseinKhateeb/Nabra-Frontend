@@ -28,16 +28,14 @@ class LipReadingController extends StateNotifier<AsyncValue<AvsrFusionResponse?>
   final LipReadingRepository _repo;
 
   Future<void> runAvsrFusion({
-    File? audioFile,
+    required File audioFile,
     required File videoFile,
-    int topK = 5,
   }) async {
     state = const AsyncLoading();
     state = await AsyncValue.guard(
       () => _repo.fuseFiles(
         audioFile: audioFile,
         videoFile: videoFile,
-        topK: topK,
       ),
     );
   }

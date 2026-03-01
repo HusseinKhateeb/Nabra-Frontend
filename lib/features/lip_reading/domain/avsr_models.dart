@@ -35,6 +35,19 @@ class AvsrFusionResponse {
   final List<AvsrTopPrediction> lipTopPredictions;
   final String fusionReason;
 
+  factory AvsrFusionResponse.fromRawOutput(String output) {
+    final String normalized = output.trim();
+    return AvsrFusionResponse(
+      finalWord: normalized,
+      matchedLipWord: '',
+      audioText: '',
+      similarity: 0,
+      lipConfidence: 0,
+      lipTopPredictions: const <AvsrTopPrediction>[],
+      fusionReason: 'Backend returned plain text output.',
+    );
+  }
+
   factory AvsrFusionResponse.fromJson(Map<String, dynamic> json) {
     final List<dynamic> predictionsRaw =
         (json['lipTopPredictions'] as List<dynamic>?) ?? <dynamic>[];

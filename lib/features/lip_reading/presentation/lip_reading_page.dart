@@ -109,36 +109,17 @@ class _LipReadingPageState extends ConsumerState<LipReadingPage> {
 
     try {
       if (kIsWeb) {
-        // Web: Only record video
-        await camera.startVideoRecording();
-        await Future<void>.delayed(const Duration(seconds: 2));
-        recordedVideo = await camera.stopVideoRecording();
-
-        if (mounted) {
-          setState(() {
-            _captureStatus = 'Uploading to backend...';
-          });
-        }
-
-        // Check video file
-        if (recordedVideo.path.isEmpty) {
-          setState(() {
-            _isCapturing = false;
-            _captureStatus = 'Video recording failed.';
-          });
-          return;
-        }
-
-        // Print video file details for debugging
-        final videoFile = File(recordedVideo.path);
-        final videoExists = await videoFile.exists();
-        final videoSize = videoExists ? await videoFile.length() : 0;
-        debugPrint('Uploading videoFile: path=${videoFile.path}, size=${videoSize} bytes, ext=${videoFile.path.split('.').last}');
-        await ref.read(lipReadingControllerProvider.notifier).runAvsrFusion(
-          audioFile: null, // No audio file for web
-          videoFile: videoFile,
-          topK: 5,
+        setState(() {
+          _isCapturing = false;
+          _captureStatus = 'AVSR requires both audio and video.';
+        });
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('This AVSR flow currently requires audio + video and is not supported on web.'),
+          ),
         );
+        return;
       } else {
         // Mobile: Record audio and video
         final bool hasPermission = await _audioRecorder.hasPermission();
@@ -201,13 +182,20 @@ class _LipReadingPageState extends ConsumerState<LipReadingPage> {
         }
 
         final audioFile = File(recordedAudio);
-        final videoFile = File(recordedVideo.path);
-        debugPrint('Uploading audioFile: path=${audioFile.path}, size=${await audioFile.length()} bytes, ext=${audioFile.path.split('.').last}');
-        debugPrint('Uploading videoFile: path=${videoFile.path}, size=${await videoFile.length()} bytes, ext=${videoFile.path.split('.').last}');
+        // Rename video file to .mp4 for backend compatibility
+        final mp4VideoPath = '${tempDir.path}/video-${DateTime.now().millisecondsSinceEpoch}.mp4';
+        final videoFile = await File(recordedVideo.path).copy(mp4VideoPath);
+        final audioExists = await audioFile.exists();
+        final videoExists = await videoFile.exists();
+        final audioSize = audioExists ? await audioFile.length() : 0;
+        final videoSize = videoExists ? await videoFile.length() : 0;
+        final audioExt = audioFile.path.split('.').last;
+        final videoExt = videoFile.path.split('.').last;
+        debugPrint('Audio file: path=${audioFile.path}, exists=$audioExists, size=${audioSize} bytes, ext=$audioExt');
+        debugPrint('Video file: path=${videoFile.path}, exists=$videoExists, size=${videoSize} bytes, ext=$videoExt');
         await ref.read(lipReadingControllerProvider.notifier).runAvsrFusion(
           audioFile: audioFile,
           videoFile: videoFile,
-          topK: 5,
         );
       }
 
