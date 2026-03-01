@@ -53,6 +53,7 @@ class LipReadingApi {
         : (fallbackMessage.isNotEmpty
           ? fallbackMessage
           : (innerError.isNotEmpty ? innerError : 'Request failed.'));
+      final String friendlyDetail = _toUserFriendlyMessage(detail);
 
       final String message;
       switch (error.type) {
@@ -62,23 +63,23 @@ class LipReadingApi {
           message = 'Request timed out. Please try again.';
           break;
         case DioExceptionType.connectionError:
-          message = 'Cannot reach server. Check network and API base URL. [$requestMethod $requestUri] $detail';
+          message = 'Cannot reach server. Check network and API base URL. [$requestMethod $requestUri] $friendlyDetail';
           break;
         case DioExceptionType.badResponse:
           if (statusCode != null) {
-            message = 'Server error ($statusCode): $detail';
+            message = 'Server error ($statusCode): $friendlyDetail';
           } else {
-            message = 'Server returned an invalid response: $detail';
+            message = 'Server returned an invalid response: $friendlyDetail';
           }
           break;
         case DioExceptionType.cancel:
           message = 'Request was cancelled.';
           break;
         case DioExceptionType.badCertificate:
-          message = 'Secure connection failed (certificate error). [$requestMethod $requestUri] $detail';
+          message = 'Secure connection failed (certificate error). [$requestMethod $requestUri] $friendlyDetail';
           break;
         case DioExceptionType.unknown:
-          message = 'Request failed. [$requestMethod $requestUri] $detail';
+          message = 'Request failed. [$requestMethod $requestUri] $friendlyDetail';
           break;
       }
       throw Exception(message);
@@ -144,6 +145,11 @@ class LipReadingApi {
         return AvsrFusionResponse.fromJson(decoded);
       }
 
+      final String friendly = _toUserFriendlyMessage(trimmed);
+      if (friendly != trimmed) {
+        throw Exception(friendly);
+      }
+
       return AvsrFusionResponse.fromRawOutput(trimmed);
     }
 
@@ -177,5 +183,13 @@ class LipReadingApi {
     }
 
     return null;
+  }
+
+  String _toUserFriendlyMessage(String message) {
+    final String normalized = message.toLowerCase();
+    if (normalized.contains('no face detected in video frames')) {
+      return 'No face was detected. Please keep your full face visible, look at the camera directly, and record in good lighting.';
+    }
+    return message;
   }
 }
