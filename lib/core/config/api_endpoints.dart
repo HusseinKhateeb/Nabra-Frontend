@@ -4,9 +4,10 @@ class ApiEndpoints {
 
   static const String me = '/users/me';
 
-  static const String sessionsStart = '/sessions/start';
-  static const String sessionsStop = '/sessions/stop';
-  static const String sessionsHistory = '/sessions/history';
+  static const String sessions = '/v1/sessions';
+  static const String sessionsStart = '/v1/sessions';
+  static const String sessionsStop = '/v1/sessions';
+  static const String sessionsHistory = '/v1/sessions';
 
   static const String chats = '/chats';
   static const String messages = '/messages';

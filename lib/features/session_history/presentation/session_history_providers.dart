@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nabra_frontend/core/providers.dart';
+import '../data/mock_session_history.dart';
 import '../data/session_history_api.dart';
 import '../data/session_history_repository.dart';
 import '../domain/session_history_model.dart';
@@ -19,8 +20,7 @@ final sessionHistoryRepositoryProvider = Provider((ref) {
 // Get all session histories
 final sessionHistoriesProvider =
     FutureProvider<List<SessionHistory>>((ref) async {
-  final repository = ref.watch(sessionHistoryRepositoryProvider);
-  return repository.getAllSessionHistories();
+  return MockSessionHistory.getMockSessions();
 });
 
 // Get session history by ID
@@ -34,7 +34,7 @@ final sessionHistoryByIdProvider =
 final sessionHistoriesBySessionIdProvider =
     FutureProvider.family<List<SessionHistory>, String>((ref, sessionId) async {
   final repository = ref.watch(sessionHistoryRepositoryProvider);
-  return repository.getSessionHistoriesBySessionId(sessionId);
+  return repository.getAllSessionHistories();
 });
 
 // Get statistics

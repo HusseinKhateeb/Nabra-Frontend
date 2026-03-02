@@ -19,10 +19,38 @@ class SessionHistoryRepository {
     return await api.getSessionHistoryById(id);
   }
 
-  /// Get session histories for a specific session
-  Future<List<SessionHistory>> getSessionHistoriesBySessionId(
-      String sessionId) async {
-    return await api.getSessionHistoriesBySessionId(sessionId);
+  /// Get session history by session ID (alias)
+  Future<SessionHistory> getSessionHistoryBySessionId(String sessionId) async {
+    return await api.getSessionHistoryBySessionId(sessionId);
+  }
+
+  /// Get session histories with filters
+  Future<List<SessionHistory>> getSessionHistoriesWithFilters({
+    String? inputType,
+    String? outputType,
+    String? status,
+    String? keyword,
+    int? minDuration,
+    int? maxDuration,
+    String? from,
+    String? to,
+    int? page,
+    int? pageSize,
+    String? sort,
+  }) async {
+    return await api.getSessionHistoriesWithFilters(
+      inputType: inputType,
+      outputType: outputType,
+      status: status,
+      keyword: keyword,
+      minDuration: minDuration,
+      maxDuration: maxDuration,
+      from: from,
+      to: to,
+      page: page,
+      pageSize: pageSize,
+      sort: sort,
+    );
   }
 
   /// Create a new session history
@@ -45,15 +73,11 @@ class SessionHistoryRepository {
   /// Get session history statistics
   Future<Map<String, dynamic>> getStatistics(String sessionId) async {
     // This can be extended based on backend capabilities
-    final histories = await getSessionHistoriesBySessionId(sessionId);
+    final history = await getSessionHistoryBySessionId(sessionId);
     return {
-      'totalSessions': histories.length,
-      'totalDuration': histories.fold<int>(0, (sum, h) => sum + h.duration),
-      'averageDuration': histories.isEmpty
-          ? 0
-          : histories.fold<int>(0, (sum, h) => sum + h.duration) ~/
-              histories.length,
-      'completedCount': histories.where((h) => h.status == 'COMPLETED').length,
+      'sessionId': history.sessionId,
+      'durationSeconds': history.durationSeconds,
+      'status': history.status,
     };
   }
 }
