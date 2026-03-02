@@ -125,9 +125,9 @@ class SessionHistoryCard extends StatelessWidget {
         title: Text(
           'Session: ${history.sessionId}',
           style: Theme.of(context).textTheme.titleMedium?.copyWith(
-            color: _darkRed,
-            fontWeight: FontWeight.w600,
-          ),
+                color: _darkRed,
+                fontWeight: FontWeight.w600,
+              ),
         ),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,

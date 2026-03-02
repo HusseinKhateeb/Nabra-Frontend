@@ -21,8 +21,8 @@ class SessionHistoryApi {
         },
       );
 
-        final payload = response.data;
-        final data = payload is Map<String, dynamic>
+      final payload = response.data;
+      final data = payload is Map<String, dynamic>
           ? (payload['content'] as List? ?? const <dynamic>[])
           : (payload as List? ?? const <dynamic>[]);
       return data
