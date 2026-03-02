@@ -11,10 +11,14 @@ class LipReadingRepository {
   Future<AvsrFusionResponse> fuseFiles({
     required File audioFile,
     required File videoFile,
+    int frameCount = 25,
+    bool fast = false,
   }) {
     return _api.fuseFiles(
       audioFile: audioFile,
       videoFile: videoFile,
+      frameCount: frameCount,
+      fast: fast,
     );
   }
 }

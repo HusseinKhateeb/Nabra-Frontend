@@ -15,6 +15,8 @@ class LipReadingApi {
   Future<AvsrFusionResponse> fuseFiles({
     required File audioFile,
     required File videoFile,
+    int frameCount = 25,
+    bool fast = false,
   }) async {
     final Map<String, dynamic> data = {
       'audioFile': await MultipartFile.fromFile(
@@ -25,6 +27,10 @@ class LipReadingApi {
         videoFile.path,
         filename: videoFile.uri.pathSegments.last,
       ),
+      'wait': 'true',
+      'timeoutSeconds': '180',
+      'frameCount': frameCount.toString(),
+      'fast': fast.toString(),
     };
     final FormData formData = FormData.fromMap(data);
 
@@ -135,6 +141,21 @@ class LipReadingApi {
 
   AvsrFusionResponse _parseFusionResponse(dynamic body) {
     if (body is Map<String, dynamic>) {
+      final dynamic ok = body['ok'];
+      if (ok is bool) {
+        if (!ok) {
+          final String error = (body['error'] as String?)?.trim() ?? 'AVSR worker failed.';
+          throw Exception(_toUserFriendlyMessage(error));
+        }
+
+        final String rawOutput = (body['rawOutput'] as String?)?.trim() ?? '';
+        final Map<String, dynamic>? decodedRaw = _tryDecodeJsonObjectFromText(rawOutput);
+        if (decodedRaw != null) {
+          return AvsrFusionResponse.fromJson(decodedRaw);
+        }
+        return AvsrFusionResponse.fromRawOutput(rawOutput);
+      }
+
       return AvsrFusionResponse.fromJson(body);
     }
 
@@ -142,7 +163,7 @@ class LipReadingApi {
       final String trimmed = body.trim();
       final Map<String, dynamic>? decoded = _tryDecodeJsonObjectFromText(trimmed);
       if (decoded != null) {
-        return AvsrFusionResponse.fromJson(decoded);
+        return _parseFusionResponse(decoded);
       }
 
       final String friendly = _toUserFriendlyMessage(trimmed);

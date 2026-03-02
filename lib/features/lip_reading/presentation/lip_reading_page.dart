@@ -17,8 +17,10 @@ const Color _black = Color(0xFF222222);
 const Color _grey = Color(0xFFEEEEEE);
 const Color _cardBg = Color(0xFFF8F8F8);
 
-const int _videoCaptureDurationMs = 1000;
-const int _audioCaptureDurationMs = 2000;
+const int _videoCaptureDurationMs = 1700;
+const int _audioCaptureDurationMs = 2200;
+const int _capturedFrameTarget = 50;
+const int _targetBackendFrames = 25;
 const double _estimatedCaptureFps = 30;
 
 class LipReadingPage extends ConsumerStatefulWidget {
@@ -210,10 +212,16 @@ class _LipReadingPageState extends ConsumerState<LipReadingPage> {
         final videoExt = videoFile.path.split('.').last;
         debugPrint('Audio file: path=${audioFile.path}, exists=$audioExists, size=${audioSize} bytes, ext=$audioExt');
         debugPrint('Video file: path=${videoFile.path}, exists=$videoExists, size=${videoSize} bytes, ext=$videoExt');
-        debugPrint('Estimated frames sent to backend: ~$estimatedFramesSent (capture=${actualVideoDurationMs}ms, estFPS=$_estimatedCaptureFps)');
+        debugPrint('Capture profile -> video=${actualVideoDurationMs}ms, audioTarget=${_audioCaptureDurationMs}ms, capturedFramesTarget=$_capturedFrameTarget, backendFramesTarget=$_targetBackendFrames');
+        debugPrint('Estimated raw captured frames: ~$estimatedFramesSent (estFPS=$_estimatedCaptureFps)');
+        if (estimatedFramesSent < _capturedFrameTarget) {
+          debugPrint('[WARNING] Estimated frames below capture target ($_capturedFrameTarget). Ask user to keep steady and retry.');
+        }
         await ref.read(lipReadingControllerProvider.notifier).runAvsrFusion(
           audioFile: audioFile,
           videoFile: videoFile,
+          frameCount: _targetBackendFrames,
+          fast: false,
         );
       }
 
@@ -540,9 +548,14 @@ class _ResultSection extends StatelessWidget {
         }
 
         final topFivePredictions = response.lipTopPredictions.take(5).toList();
-        final double finalConfidence = topFivePredictions.isNotEmpty
-          ? topFivePredictions.first.confidence
-          : response.lipConfidence;
+        final String finalResultWord = response.finalWord.trim().isNotEmpty
+          ? response.finalWord.trim()
+          : (response.matchedLipWord.trim().isNotEmpty
+              ? response.matchedLipWord.trim()
+              : (topFivePredictions.isNotEmpty ? topFivePredictions.first.word : ''));
+        final double finalConfidence = response.lipConfidence > 0
+          ? response.lipConfidence
+          : (topFivePredictions.isNotEmpty ? topFivePredictions.first.confidence : 0);
         final String finalConfidenceText = finalConfidence <= 1
           ? '${(finalConfidence * 100).toStringAsFixed(1)}%'
           : '${finalConfidence.toStringAsFixed(1)}%';
@@ -613,7 +626,7 @@ class _ResultSection extends StatelessWidget {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      response.finalWord,
+                      finalResultWord.isNotEmpty ? finalResultWord : '-',
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 32,
@@ -704,6 +717,8 @@ class _ResultSection extends StatelessWidget {
               ...topFivePredictions.asMap().entries.map((entry) {
                 final index = entry.key;
                 final pred = entry.value;
+                final bool isSelected =
+                    pred.word.trim().toLowerCase() == finalResultWord.toLowerCase();
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 8),
                   child: Container(
@@ -712,8 +727,8 @@ class _ResultSection extends StatelessWidget {
                       color: _grey,
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
-                        color: index == 0 ? _darkRed : _grey,
-                        width: index == 0 ? 2 : 1,
+                        color: isSelected ? _darkRed : _grey,
+                        width: isSelected ? 2 : 1,
                       ),
                     ),
                     child: Row(
@@ -722,14 +737,14 @@ class _ResultSection extends StatelessWidget {
                           width: 28,
                           height: 28,
                           decoration: BoxDecoration(
-                            color: index == 0 ? _darkRed : _grey,
+                            color: isSelected ? _darkRed : _grey,
                             shape: BoxShape.circle,
                           ),
                           child: Center(
                             child: Text(
                               '${index + 1}',
                               style: TextStyle(
-                                color: index == 0 ? Colors.white : _darkRed,
+                                color: isSelected ? Colors.white : _darkRed,
                                 fontSize: 12,
                                 fontWeight: FontWeight.bold,
                               ),
@@ -743,7 +758,7 @@ class _ResultSection extends StatelessWidget {
                             style: TextStyle(
                               color: _darkRed,
                               fontSize: 16,
-                              fontWeight: index == 0 ? FontWeight.bold : FontWeight.w500,
+                              fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
                             ),
                           ),
                         ),
