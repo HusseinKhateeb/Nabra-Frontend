@@ -18,14 +18,15 @@ const Color _black = Color(0xFF222222);
 const Color _grey = Color(0xFFEEEEEE);
 const Color _cardBg = Color(0xFFF8F8F8);
 
-const int _videoCaptureDurationMs = 1200;
-const int _audioCaptureDurationMs = 1500;
-const int _capturedFrameTarget = 50;
+const int _videoCaptureDurationMs = 1000;
+const int _audioCaptureDurationMs = 1000;
+const int _capturedFrameTarget = 25;
 const int _targetBackendFrames = 25;
 const int _recordingFps = 25;
 const double _estimatedCaptureFps = 25.0;
 const double _audioBoostGain = 1.8;
 const int _wavHeaderSize = 44;
+const int _frameTolerance = 1;
 
 class LipReadingPage extends ConsumerStatefulWidget {
   const LipReadingPage({super.key});
@@ -73,7 +74,7 @@ class _LipReadingPageState extends ConsumerState<LipReadingPage> {
       );
 
       final List<ResolutionPreset> preferredPresets = <ResolutionPreset>[
-        ResolutionPreset.veryHigh,
+        // ResolutionPreset.veryHigh,
         ResolutionPreset.high,
         ResolutionPreset.medium,
       ];
@@ -243,16 +244,16 @@ class _LipReadingPageState extends ConsumerState<LipReadingPage> {
           path: audioPath,
         );
         setState(() {
-          _captureStatus = 'Collecting video ($_videoCaptureDurationMs ms @ ${_recordingFps}fps, $_activeResolutionPreset) + audio ($_audioCaptureDurationMs ms)...';
+          _captureStatus = 'Collecting raw $_capturedFrameTarget frames ($_videoCaptureDurationMs ms @ ${_recordingFps}fps, $_activeResolutionPreset)...';
         });
 
-        final DateTime videoStartedAt = DateTime.now();
         try {
           await camera.prepareForVideoRecording();
         } catch (_) {
           // best-effort pre-prepare right before recording
         }
         await camera.startVideoRecording();
+        final DateTime videoStartedAt = DateTime.now();
         await Future<void>.delayed(const Duration(milliseconds: _videoCaptureDurationMs));
         recordedVideo = await camera.stopVideoRecording();
         final int actualVideoDurationMs = DateTime.now().difference(videoStartedAt).inMilliseconds;
@@ -323,8 +324,8 @@ class _LipReadingPageState extends ConsumerState<LipReadingPage> {
         debugPrint('Video file: path=${videoFile.path}, exists=$videoExists, size=${videoSize} bytes, ext=$videoExt');
         debugPrint('Capture profile -> video=${actualVideoDurationMs}ms, audioTarget=${_audioCaptureDurationMs}ms, capturedFramesTarget=$_capturedFrameTarget, backendFramesTarget=$_targetBackendFrames');
         debugPrint('Estimated raw captured frames: ~$estimatedFramesSent (estFPS=$_estimatedCaptureFps)');
-        if (estimatedFramesSent < _capturedFrameTarget) {
-          debugPrint('[WARNING] Estimated frames below capture target ($_capturedFrameTarget). Ask user to keep steady and retry.');
+        if ((estimatedFramesSent - _capturedFrameTarget).abs() > _frameTolerance) {
+          debugPrint('[WARNING] Estimated raw frames ($estimatedFramesSent) differ from target ($_capturedFrameTarget).');
         }
         await ref.read(lipReadingControllerProvider.notifier).runAvsrFusion(
           audioFile: boostedAudioFile,
@@ -444,21 +445,23 @@ class _LipReadingPageState extends ConsumerState<LipReadingPage> {
                                   child: Stack(
                                     fit: StackFit.expand,
                                     children: [
-                                      LayoutBuilder(
-                                        builder: (context, constraints) {
-                                          final previewSize = _controller!.value.previewSize;
-                                          if (previewSize == null) {
-                                            return CameraPreview(_controller!);
-                                          }
-                                          return FittedBox(
-                                            fit: BoxFit.cover,
-                                            child: SizedBox(
-                                              width: previewSize.height,
-                                              height: previewSize.width,
-                                              child: CameraPreview(_controller!),
-                                            ),
-                                          );
-                                        },
+                                      RepaintBoundary(
+                                        child: LayoutBuilder(
+                                          builder: (context, constraints) {
+                                            final previewSize = _controller!.value.previewSize;
+                                            if (previewSize == null) {
+                                              return CameraPreview(_controller!);
+                                            }
+                                            return FittedBox(
+                                              fit: BoxFit.cover,
+                                              child: SizedBox(
+                                                width: previewSize.height,
+                                                height: previewSize.width,
+                                                child: CameraPreview(_controller!),
+                                              ),
+                                            );
+                                          },
+                                        ),
                                       ),
                                       if (_isCapturing)
                                         Container(
