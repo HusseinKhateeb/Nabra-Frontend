@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:camera/camera.dart';
 import 'package:flutter/foundation.dart';
@@ -17,11 +18,13 @@ const Color _black = Color(0xFF222222);
 const Color _grey = Color(0xFFEEEEEE);
 const Color _cardBg = Color(0xFFF8F8F8);
 
-const int _videoCaptureDurationMs = 1700;
-const int _audioCaptureDurationMs = 2200;
+const int _videoCaptureDurationMs = 1200;
+const int _audioCaptureDurationMs = 1500;
 const int _capturedFrameTarget = 50;
 const int _targetBackendFrames = 25;
 const double _estimatedCaptureFps = 30;
+const double _audioBoostGain = 1.8;
+const int _wavHeaderSize = 44;
 
 class LipReadingPage extends ConsumerStatefulWidget {
   const LipReadingPage({super.key});
@@ -95,6 +98,39 @@ class _LipReadingPageState extends ConsumerState<LipReadingPage> {
     super.dispose();
   }
 
+  Future<File> _buildBoostedAudioBuffer({
+    required File sourceFile,
+    required Directory tempDir,
+    double gain = _audioBoostGain,
+  }) async {
+    final Uint8List bytes = await sourceFile.readAsBytes();
+    if (bytes.length <= _wavHeaderSize) {
+      return sourceFile;
+    }
+
+    final String riff = String.fromCharCodes(bytes.sublist(0, 4));
+    final String wave = String.fromCharCodes(bytes.sublist(8, 12));
+    if (riff != 'RIFF' || wave != 'WAVE') {
+      return sourceFile;
+    }
+
+    final ByteData sourceData = ByteData.sublistView(bytes);
+    final Uint8List boostedBytes = Uint8List.fromList(bytes);
+    final ByteData boostedData = ByteData.sublistView(boostedBytes);
+
+    for (int offset = _wavHeaderSize; offset + 1 < boostedBytes.length; offset += 2) {
+      final int sample = sourceData.getInt16(offset, Endian.little);
+      final int amplified = (sample * gain).round().clamp(-32768, 32767);
+      boostedData.setInt16(offset, amplified, Endian.little);
+    }
+
+    final String boostedPath =
+        '${tempDir.path}/audio-boosted-${DateTime.now().millisecondsSinceEpoch}.wav';
+    final File boostedFile = File(boostedPath);
+    await boostedFile.writeAsBytes(boostedBytes, flush: true);
+    return boostedFile;
+  }
+
   Future<void> _startCaptureAndSend() async {
     if (_isCapturing) {
       return;
@@ -144,9 +180,16 @@ class _LipReadingPageState extends ConsumerState<LipReadingPage> {
 
         final Directory tempDir = await getTemporaryDirectory();
         final String audioPath =
-            '${tempDir.path}/audio-${DateTime.now().millisecondsSinceEpoch}.m4a';
+            '${tempDir.path}/audio-${DateTime.now().millisecondsSinceEpoch}.wav';
 
-        await _audioRecorder.start(const RecordConfig(), path: audioPath);
+        await _audioRecorder.start(
+          const RecordConfig(
+            encoder: AudioEncoder.wav,
+            sampleRate: 16000,
+            numChannels: 1,
+          ),
+          path: audioPath,
+        );
         setState(() {
           _captureStatus = 'Collecting video ($_videoCaptureDurationMs ms) + audio ($_audioCaptureDurationMs ms)...';
         });
@@ -174,7 +217,7 @@ class _LipReadingPageState extends ConsumerState<LipReadingPage> {
 
         if (mounted) {
           setState(() {
-            _captureStatus = 'Uploading to backend...';
+            _captureStatus = 'Enhancing audio buffer...';
           });
         }
 
@@ -196,6 +239,15 @@ class _LipReadingPageState extends ConsumerState<LipReadingPage> {
         }
 
         final audioFile = File(recordedAudio);
+        final File boostedAudioFile = await _buildBoostedAudioBuffer(
+          sourceFile: audioFile,
+          tempDir: tempDir,
+        );
+        if (mounted) {
+          setState(() {
+            _captureStatus = 'Uploading to backend...';
+          });
+        }
         // Keep mp4 name for backend compatibility; try fast rename first.
         final mp4VideoPath = '${tempDir.path}/video-${DateTime.now().millisecondsSinceEpoch}.mp4';
         File videoFile;
@@ -204,13 +256,13 @@ class _LipReadingPageState extends ConsumerState<LipReadingPage> {
         } catch (_) {
           videoFile = await File(recordedVideo.path).copy(mp4VideoPath);
         }
-        final audioExists = await audioFile.exists();
+        final audioExists = await boostedAudioFile.exists();
         final videoExists = await videoFile.exists();
-        final audioSize = audioExists ? await audioFile.length() : 0;
+        final audioSize = audioExists ? await boostedAudioFile.length() : 0;
         final videoSize = videoExists ? await videoFile.length() : 0;
-        final audioExt = audioFile.path.split('.').last;
+        final audioExt = boostedAudioFile.path.split('.').last;
         final videoExt = videoFile.path.split('.').last;
-        debugPrint('Audio file: path=${audioFile.path}, exists=$audioExists, size=${audioSize} bytes, ext=$audioExt');
+        debugPrint('Audio file: path=${boostedAudioFile.path}, exists=$audioExists, size=${audioSize} bytes, ext=$audioExt, gain=$_audioBoostGain');
         debugPrint('Video file: path=${videoFile.path}, exists=$videoExists, size=${videoSize} bytes, ext=$videoExt');
         debugPrint('Capture profile -> video=${actualVideoDurationMs}ms, audioTarget=${_audioCaptureDurationMs}ms, capturedFramesTarget=$_capturedFrameTarget, backendFramesTarget=$_targetBackendFrames');
         debugPrint('Estimated raw captured frames: ~$estimatedFramesSent (estFPS=$_estimatedCaptureFps)');
@@ -218,7 +270,7 @@ class _LipReadingPageState extends ConsumerState<LipReadingPage> {
           debugPrint('[WARNING] Estimated frames below capture target ($_capturedFrameTarget). Ask user to keep steady and retry.');
         }
         await ref.read(lipReadingControllerProvider.notifier).runAvsrFusion(
-          audioFile: audioFile,
+          audioFile: boostedAudioFile,
           videoFile: videoFile,
           frameCount: _targetBackendFrames,
           fast: false,
