@@ -22,7 +22,8 @@ const int _videoCaptureDurationMs = 1200;
 const int _audioCaptureDurationMs = 1500;
 const int _capturedFrameTarget = 50;
 const int _targetBackendFrames = 25;
-const double _estimatedCaptureFps = 30;
+const int _recordingFps = 25;
+const double _estimatedCaptureFps = 25.0;
 const double _audioBoostGain = 1.8;
 const int _wavHeaderSize = 44;
 
@@ -36,6 +37,7 @@ class LipReadingPage extends ConsumerStatefulWidget {
 class _LipReadingPageState extends ConsumerState<LipReadingPage> {
   CameraController? _controller;
   final AudioRecorder _audioRecorder = AudioRecorder();
+  ResolutionPreset _activeResolutionPreset = ResolutionPreset.medium;
 
   bool _initializing = true;
   bool _isCapturing = false;
@@ -69,25 +71,75 @@ class _LipReadingPageState extends ConsumerState<LipReadingPage> {
         (c) => c.lensDirection == CameraLensDirection.front,
         orElse: () => cameras.first,
       );
-      final controller = CameraController(
-        front,
+
+      final List<ResolutionPreset> preferredPresets = <ResolutionPreset>[
+        ResolutionPreset.veryHigh,
+        ResolutionPreset.high,
         ResolutionPreset.medium,
-        enableAudio: false,
-      );
-      await controller.initialize();
-      try {
-        await controller.prepareForVideoRecording();
-      } catch (_) {
-        // Some devices/platforms may not require or support this optimization.
+      ];
+
+      CameraController? selectedController;
+      ResolutionPreset selectedPreset = ResolutionPreset.medium;
+
+      for (final preset in preferredPresets) {
+        final candidate = CameraController(
+          front,
+          preset,
+          enableAudio: false,
+          fps: _recordingFps,
+        );
+        try {
+          await candidate.initialize();
+          try {
+            await candidate.prepareForVideoRecording();
+          } catch (_) {
+            // Some devices/platforms may not require or support this optimization.
+          }
+          await _warmupVideoRecorder(candidate);
+          selectedController = candidate;
+          selectedPreset = preset;
+          break;
+        } catch (_) {
+          await candidate.dispose();
+        }
       }
+
+      if (selectedController == null) {
+        throw Exception('Unable to initialize camera with supported resolution.');
+      }
+
       if (!mounted) return;
       setState(() {
-        _controller = controller;
+        _controller = selectedController;
+        _activeResolutionPreset = selectedPreset;
         _initializing = false;
       });
     } catch (e) {
       if (!mounted) return;
       setState(() => _initializing = false);
+    }
+  }
+
+  Future<void> _warmupVideoRecorder(CameraController controller) async {
+    if (kIsWeb) return;
+    try {
+      await controller.startVideoRecording();
+      await Future<void>.delayed(const Duration(milliseconds: 180));
+      final XFile stoppedFile = await controller.stopVideoRecording();
+      final String warmupPath = stoppedFile.path;
+      if (warmupPath.isNotEmpty) {
+        final File warmupFile = File(warmupPath);
+        if (await warmupFile.exists()) {
+          await warmupFile.delete();
+        }
+      }
+      try {
+        await controller.prepareForVideoRecording();
+      } catch (_) {
+        // best-effort re-prepare
+      }
+    } catch (_) {
+      // warm-up is best-effort only
     }
   }
 
@@ -191,10 +243,15 @@ class _LipReadingPageState extends ConsumerState<LipReadingPage> {
           path: audioPath,
         );
         setState(() {
-          _captureStatus = 'Collecting video ($_videoCaptureDurationMs ms) + audio ($_audioCaptureDurationMs ms)...';
+          _captureStatus = 'Collecting video ($_videoCaptureDurationMs ms @ ${_recordingFps}fps, $_activeResolutionPreset) + audio ($_audioCaptureDurationMs ms)...';
         });
 
         final DateTime videoStartedAt = DateTime.now();
+        try {
+          await camera.prepareForVideoRecording();
+        } catch (_) {
+          // best-effort pre-prepare right before recording
+        }
         await camera.startVideoRecording();
         await Future<void>.delayed(const Duration(milliseconds: _videoCaptureDurationMs));
         recordedVideo = await camera.stopVideoRecording();
@@ -387,7 +444,22 @@ class _LipReadingPageState extends ConsumerState<LipReadingPage> {
                                   child: Stack(
                                     fit: StackFit.expand,
                                     children: [
-                                      CameraPreview(_controller!),
+                                      LayoutBuilder(
+                                        builder: (context, constraints) {
+                                          final previewSize = _controller!.value.previewSize;
+                                          if (previewSize == null) {
+                                            return CameraPreview(_controller!);
+                                          }
+                                          return FittedBox(
+                                            fit: BoxFit.cover,
+                                            child: SizedBox(
+                                              width: previewSize.height,
+                                              height: previewSize.width,
+                                              child: CameraPreview(_controller!),
+                                            ),
+                                          );
+                                        },
+                                      ),
                                       if (_isCapturing)
                                         Container(
                                           decoration: BoxDecoration(

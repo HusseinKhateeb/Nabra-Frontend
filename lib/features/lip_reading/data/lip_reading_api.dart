@@ -28,7 +28,7 @@ class LipReadingApi {
         filename: videoFile.uri.pathSegments.last,
       ),
       'wait': 'true',
-      'timeoutSeconds': '180',
+      'timeoutSeconds': '240',
       'frameCount': frameCount.toString(),
       'fast': fast.toString(),
     };
