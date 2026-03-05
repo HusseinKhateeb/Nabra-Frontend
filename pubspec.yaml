@@ -11,6 +11,25 @@ dependencies:
     sdk: flutter
   camera: ^0.11.0+2
   camera_web: ^0.3.1+1
+
+
+  # 🎙️ Audio recording
+  record: ^5.0.4
+  path_provider: ^2.1.2
+
+  # 💬 Realtime chat
+  stomp_dart_client: ^1.0.1
+
+  # 🌍 Localization & dates
+  intl: ^0.20.2
+  flutter_localizations:
+    sdk: flutter
+
+  # 🔐 Auth
+  google_sign_in: ^6.2.1
+
+
+  # 🌐 Networking
   dio: ^5.7.0
   path_provider: ^2.1.5
   record: ^6.2.0
@@ -19,6 +38,17 @@ dependencies:
   stomp_dart_client: ^1.0.1
 
   # 🌍 Localization & dates
+  # 🧠 State management
+  flutter_riverpod: ^2.6.1
+
+  # 🧭 Routing
+  go_router: ^14.6.2
+
+  # 🔒 Secure token storage
+  flutter_secure_storage: ^9.2.2
+
+
+  # Localization
   intl: ^0.19.0
   flutter_localizations:
     sdk: flutter
@@ -36,6 +66,12 @@ dependencies:
   flutter_secure_storage: ^9.2.2
 
 
+  # Media (lip-reading + voice)
+
+  # 📷 Media (lip-reading + voice)
+
+  camera: ^0.11.0+2
+
   # 🧰 Utils
   equatable: ^2.0.5
   freezed_annotation: ^2.4.1
@@ -43,6 +79,11 @@ dependencies:
 
   # ▶️ VIDEO PLAYER (ضروري للقاموس البصري)
   video_player: ^2.8.2
+
+
+  # ▶️ VIDEO PLAYER (ضروري للقاموس البصري)
+  video_player: ^2.8.2
+
 
 dev_dependencies:
   flutter_test:

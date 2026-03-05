@@ -26,9 +26,15 @@ class ApiEndpoints {
   static const String messages = '/v1/messages';
   static const String dictionary = '/visual-dictionary';
 
-  static const String learning = '/v1/learning';
-  static const String smartPrediction = '/v1/predictions';
+  // static const String learning = '/v1/learning';
+  // static const String smartPrediction = '/v1/predictions';
 
   static const String reports = '/v1/reports';
   static const String adminReports = '/v1/admin/reports';
+  static const String learning = '/learning';
+  static const String smartPrediction = '/predictions';
+
+  // static const String reports = '/reports';
+  // static const String adminReports = '/admin/reports';
+
 }
