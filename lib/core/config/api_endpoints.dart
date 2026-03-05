@@ -1,40 +1,65 @@
 class ApiEndpoints {
-  static const String authRegister = '/v1/auth/register';
-  static const String authLogin = '/v1/auth/login';
+  static const String _v1 = '/v1';
 
-  // 🔐 Google Auth
-  static const String authGoogle = '/v1/auth/google';
+  // Auth
+  static const String authRegister = '$_v1/auth/register';
+  static const String authLogin = '$_v1/auth/login';
+  static const String authChangePassword = '$_v1/auth/change-password';
+  static const String authForgotPassword = '$_v1/auth/forgot-password';
+  static const String authVerifyResetCode = '$_v1/auth/verify-reset-code';
+  static const String authResetPassword = '$_v1/auth/reset-password';
+  static const String authGoogle = '$_v1/auth/google';
 
-  static const String authForgotPassword = '/v1/auth/forgot-password';
-  static const String authVerifyResetCode = '/v1/auth/verify-reset-code';
-  static const String authResetPassword = '/v1/auth/reset-password';
+  // Users
+  static const String usersMe = '$_v1/users/me';
+  static const String users = '$_v1/users';
+  static const String usersProfile = '$_v1/users/profile';
+  static const String usersSettings = '$_v1/users/settings';
 
-  static const String me = '/v1/users/me';
+  // Chat & Messages
+  static const String chats = '$_v1/chats';
 
-  static const String sessionsStart = '/v1/sessions/start';
-  static const String sessionsStop = '/v1/sessions/stop';
-  static const String sessionsHistory = '/v1/sessions/history';
+  // Sessions
+  static const String sessions = '$_v1/sessions';
 
-  static const String lipReadingInfer = '/v1/lipreading/infer';
-  static const String lipReadingAvsrFuse = '/v1/lipreading/avsr/fuse';
-  static const String lipReadingAvsrFuseFiles = '/v1/lipreading/avsr/fuse-files';
+  // Smart prediction
+  static const String predictionNext = '$_v1/prediction/next';
+  static const String predictionCorrect = '$_v1/prediction/correct';
 
-  //current change
-  // static const String reports = '/reports';
-  // static const String adminReports = '/admin/reports';
-  static const String chats = '/v1/chats';
-  static const String messages = '/v1/messages';
+  // Reports
+  static const String reports = '$_v1/reports';
+
+  // Admin
+  static const String adminUsers = '$_v1/admin/users';
+  static const String adminReports = '$_v1/admin/reports';
+
+  // Visual dictionary (non-v1 API prefix by backend design)
   static const String dictionary = '/visual-dictionary';
+  static const String adminDictionary = '/admin/visual-dictionary';
 
-  // static const String learning = '/v1/learning';
-  // static const String smartPrediction = '/v1/predictions';
+  // Lip reading
+  static const String lipReadingPing = '$_v1/lipreading/ping';
+  static const String lipReadingInfer = '$_v1/lipreading/infer';
+  static const String lipReadingAvsrFuse = '$_v1/lipreading/avsr/fuse';
+  static const String lipReadingAvsrFuseFiles =
+    '$_v1/lipreading/avsr/fuse-files';
+  static const String lipReadingAvsrUploadAudio =
+    '$_v1/lipreading/avsr/upload-audio';
+  static const String lipReadingAvsrUploadVideo =
+    '$_v1/lipreading/avsr/upload-video';
 
-  static const String reports = '/v1/reports';
-  static const String adminReports = '/v1/admin/reports';
-  static const String learning = '/learning';
-  static const String smartPrediction = '/predictions';
+  static String chatMessages(String chatId) => '$chats/$chatId/messages';
 
-  // static const String reports = '/reports';
-  // static const String adminReports = '/admin/reports';
+  static String sessionStop(String sessionId) => '$sessions/$sessionId/stop';
 
+  static String adminReportById(String reportId) => '$adminReports/$reportId';
+
+  static String dictionaryCategoryWords(String categoryId) =>
+    '$dictionary/categories/$categoryId/words';
+
+  static String dictionaryFavoriteWord(String wordId) =>
+    '$dictionary/favorites/$wordId';
+
+  static String lipReadingAvsrFuseFilesStatus(String jobId) =>
+    '$lipReadingAvsrFuseFiles/status/$jobId';
 }

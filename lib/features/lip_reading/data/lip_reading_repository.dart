@@ -13,12 +13,14 @@ class LipReadingRepository {
     required File videoFile,
     int frameCount = 25,
     bool fast = false,
+    void Function(String phase)? onPhase,
   }) {
     return _api.fuseFiles(
       audioFile: audioFile,
       videoFile: videoFile,
       frameCount: frameCount,
       fast: fast,
+      onPhase: onPhase,
     );
   }
 }

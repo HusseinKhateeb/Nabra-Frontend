@@ -372,7 +372,20 @@ class _LipReadingPageState extends ConsumerState<LipReadingPage> {
   @override
   Widget build(BuildContext context) {
     final AsyncValue<AvsrFusionResponse?> state = ref.watch(lipReadingControllerProvider);
-    final bool uploading = state.isLoading || _isCapturing;
+    final LipReadingPhase phase = ref.watch(lipReadingPhaseProvider);
+    final bool uploading =
+        phase == LipReadingPhase.uploading ||
+        phase == LipReadingPhase.processing ||
+        state.isLoading ||
+        _isCapturing;
+
+    final String phaseStatus = switch (phase) {
+      LipReadingPhase.idle => _captureStatus,
+      LipReadingPhase.uploading => 'uploading',
+      LipReadingPhase.processing => 'processing',
+      LipReadingPhase.completed => 'completed',
+      LipReadingPhase.failed => 'failed',
+    };
 
     if (!_isSupportedPlatform) {
       return Scaffold(
@@ -507,7 +520,7 @@ class _LipReadingPageState extends ConsumerState<LipReadingPage> {
                       ),
                     Flexible(
                       child: Text(
-                        _captureStatus,
+                        phaseStatus,
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           color: uploading ? _darkRed : _black.withOpacity(0.7),
@@ -546,7 +559,11 @@ class _LipReadingPageState extends ConsumerState<LipReadingPage> {
                       ),
                       const SizedBox(width: 12),
                       Text(
-                        uploading ? 'Processing...' : 'Start Recording',
+                        uploading
+                            ? (phase == LipReadingPhase.uploading
+                                ? 'Uploading...'
+                                : 'Processing...')
+                            : 'Start Recording',
                         style: const TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,

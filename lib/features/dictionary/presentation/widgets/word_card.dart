@@ -28,7 +28,7 @@ class _WordCardState extends ConsumerState<WordCard> {
     super.initState();
 
     if (widget.word.videoUrl != null && widget.word.videoUrl!.isNotEmpty) {
-      final baseUrl = AppConfig.apiBaseUrl.replaceAll('/api', '');
+      final baseUrl = AppConfig.serverBaseUrl;
 
       _controller = VideoPlayerController.networkUrl(
         Uri.parse('$baseUrl${widget.word.videoUrl}'),

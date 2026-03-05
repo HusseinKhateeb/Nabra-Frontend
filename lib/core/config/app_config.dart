@@ -21,4 +21,14 @@ class AppConfig {
 
     return 'http://localhost:8080/api';
   }
+
+  static String get serverBaseUrl {
+    final String configured = apiBaseUrl.trim();
+    if (configured.endsWith('/api')) {
+      return configured.substring(0, configured.length - 4);
+    }
+    return configured;
+  }
+
+  static String get socketBaseUrl => serverBaseUrl;
 }

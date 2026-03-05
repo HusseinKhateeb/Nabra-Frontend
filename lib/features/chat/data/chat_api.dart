@@ -1,7 +1,4 @@
-import 'dart:io';
-
-import 'package:dio/dio.dart';
-
+import '../../../core/config/api_endpoints.dart';
 import '../../../core/network/dio_client.dart';
 import '../domain/chat_model.dart';
 import '../domain/message_model.dart';
@@ -12,14 +9,14 @@ class ChatApi {
 
   // ================= Chats =================
   Future<List<ChatModel>> getChats() async {
-    final res = await dio.get('/v1/chats');
+    final res = await dio.get(ApiEndpoints.chats);
     final content = res.data['content'] as List;
     return content.map((e) => ChatModel.fromJson(e)).toList();
   }
 
   // ================= Messages =================
   Future<List<MessageModel>> getMessages(String chatId) async {
-    final res = await dio.get('/v1/chats/$chatId/messages');
+    final res = await dio.get(ApiEndpoints.chatMessages(chatId));
     final content = res.data['content'] as List;
     return content.map((e) => MessageModel.fromJson(e)).toList();
   }
@@ -30,7 +27,7 @@ class ChatApi {
     required String text,
   }) async {
     await dio.post(
-      '/v1/chats/$chatId/messages',
+      ApiEndpoints.chatMessages(chatId),
       data: {
         "type": "TEXT",
         "textContent": text,
@@ -42,7 +39,7 @@ class ChatApi {
 
   Future<ChatModel> createChat(String userId) async {
     final res = await dio.post(
-      '/v1/chats',
+      ApiEndpoints.chats,
       data: {
         "groupChat": false,
         "participantUserIds": [userId],
@@ -57,7 +54,7 @@ class ChatApi {
     required String localPath,
   }) async {
     await dio.post(
-      '/v1/chats/$chatId/messages',
+      ApiEndpoints.chatMessages(chatId),
       data: {
         "type": "VOICE",
         "textContent": "🎤 رسالة صوتية",

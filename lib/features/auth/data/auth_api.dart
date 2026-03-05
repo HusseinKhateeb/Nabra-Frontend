@@ -52,12 +52,26 @@ class AuthApi {
     await _client.dio.post(
       ApiEndpoints.authRegister,
       data: {
-      'username': username,
-      'email': email,
-      'password': password,
-      'displayName': displayName,
+        'username': username,
+        'email': email,
+        'password': password,
+        'displayName': displayName,
         'userType': 'HEARING',
-        'preferredLanguage': 'en',
+      },
+    );
+  }
+
+  Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+    required String confirmPassword,
+  }) async {
+    await _client.dio.post(
+      ApiEndpoints.authChangePassword,
+      data: {
+        'currentPassword': currentPassword,
+        'newPassword': newPassword,
+        'confirmPassword': confirmPassword,
       },
     );
   }

@@ -1,10 +1,10 @@
 import 'dart:convert';
-import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart';
+import 'package:nabra_frontend/core/config/app_config.dart';
 
 import './../data/chat_socket_service.dart';
 import './../data/chat_providers.dart';
@@ -63,7 +63,7 @@ class _ChatRoomPageState extends ConsumerState<ChatRoomPage> {
 
       // 3️⃣ WebSocket
       socket.connect(
-        baseUrl: 'http://10.0.2.2:8080',
+        baseUrl: AppConfig.socketBaseUrl,
         token: widget.token,
         chatId: widget.chatId,
         onEvent: handleEvent,

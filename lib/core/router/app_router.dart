@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:nabra_frontend/features/welcome/presentation/instructions_page.dart';
 import 'package:nabra_frontend/features/auth/presentation/forgot_password_page.dart';
 import 'package:nabra_frontend/features/auth/presentation/verify_reset_code_page.dart';
@@ -20,10 +21,41 @@ import '../../features/chat/presentation/chat_page.dart';
 import '../../features/learning/presentation/learning_page.dart';
 import '../../features/admin/presentation/admin_page.dart';
 import '../../features/profile/presentation/profile_page.dart';
+import '../../shared/constants.dart';
 import 'app_routes.dart';
+
+const FlutterSecureStorage _routerStorage = FlutterSecureStorage();
+
+bool _isPublicRoute(String path) {
+  const Set<String> publicRoutes = <String>{
+    AppRoutes.welcome,
+    AppRoutes.instructions,
+    AppRoutes.permissions,
+    AppRoutes.splash,
+    AppRoutes.login,
+    AppRoutes.register,
+    AppRoutes.forgotPassword,
+    AppRoutes.verifyResetCode,
+    AppRoutes.resetPassword,
+    AppRoutes.resetPasswordSuccess,
+  };
+  return publicRoutes.contains(path);
+}
 
 final GoRouter appRouter = GoRouter(
   initialLocation: AppRoutes.welcome,
+  redirect: (context, state) async {
+    final String path = state.matchedLocation;
+    if (_isPublicRoute(path)) return null;
+
+    final String? token = await _routerStorage.read(key: StorageKeys.accessToken) ??
+        await _routerStorage.read(key: 'access_token');
+
+    if (token == null || token.trim().isEmpty) {
+      return AppRoutes.login;
+    }
+    return null;
+  },
   routes: <RouteBase>[
     GoRoute(
       path: AppRoutes.welcome,
