@@ -14,7 +14,7 @@ import '../../features/admin/presentation/admin_page.dart';
 import 'app_routes.dart';
 
 final GoRouter appRouter = GoRouter(
-  initialLocation: AppRoutes.splash,
+  initialLocation: AppRoutes.lipReading,
   routes: <RouteBase>[
     GoRoute(
       path: AppRoutes.splash,

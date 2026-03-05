@@ -9,9 +9,10 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-
-  # Networking
+  camera: ^0.11.0+2
+  camera_web: ^0.3.1+1
   dio: ^5.7.0
+  # Networking
 
   # State management
   flutter_riverpod: ^2.6.1
@@ -28,7 +29,8 @@ dependencies:
     sdk: flutter
 
   # Media (lip-reading + voice)
-  camera: ^0.11.0+2
+  record: ^6.2.0
+  path_provider: ^2.1.5
 
   # Utils
   equatable: ^2.0.5
