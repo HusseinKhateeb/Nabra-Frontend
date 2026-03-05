@@ -52,11 +52,12 @@ class AuthApi {
     await _client.dio.post(
       ApiEndpoints.authRegister,
       data: {
-        'username': username,
-        'email': email,
-        'password': password,
-        'displayName': displayName,
-        'userType': 'USER',
+      'username': username,
+      'email': email,
+      'password': password,
+      'displayName': displayName,
+        'userType': 'HEARING',
+        'preferredLanguage': 'en',
       },
     );
   }

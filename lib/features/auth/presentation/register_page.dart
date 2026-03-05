@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:dio/dio.dart';
 
 import '../../../core/router/app_routes.dart';
 import '../../../core/utils/validators.dart';
@@ -23,6 +24,24 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
 
   bool _obscure = true;
 
+  String _extractErrorMessage(Object error) {
+    if (error is DioException) {
+      final data = error.response?.data;
+      if (data is Map<String, dynamic>) {
+        final dynamic message = data['message'] ?? data['error'] ?? data['detail'];
+        if (message != null && message.toString().trim().isNotEmpty) {
+          return message.toString();
+        }
+      }
+      if (data is String && data.trim().isNotEmpty) {
+        return data;
+      }
+      return 'فشل إنشاء الحساب. تأكد من البيانات وحاول مرة أخرى.';
+    }
+
+    return error.toString();
+  }
+
   @override
   void dispose() {
     _fullName.dispose();
@@ -39,7 +58,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
     ref.listen(authControllerProvider, (prev, next) {
       if (next.hasError) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(next.error.toString())),
+          SnackBar(content: Text(_extractErrorMessage(next.error!))),
         );
       }
 

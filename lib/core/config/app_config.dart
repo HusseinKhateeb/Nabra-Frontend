@@ -11,14 +11,14 @@ class AppConfig {
 
     if (kIsWeb) {
       final String scheme = Uri.base.scheme.isNotEmpty ? Uri.base.scheme : 'http';
-      final String host = Uri.base.host.isNotEmpty ? Uri.base.host : '127.0.0.1';
+      final String host = Uri.base.host.isNotEmpty ? Uri.base.host : 'localhost';
       return '$scheme://$host:8080/api';
     }
 
     if (defaultTargetPlatform == TargetPlatform.android) {
-      return 'http://127.0.0.1:8080/api';
+      return 'http://localhost:8080/api';
     }
 
-    return 'http://192.168.1.4:8080/api';
+    return 'http://localhost:8080/api';
   }
 }
