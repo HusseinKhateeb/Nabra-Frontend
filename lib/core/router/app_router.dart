@@ -16,14 +16,7 @@ import '../../features/sessions/presentation/sessions_page.dart';
 import '../../features/chat/presentation/chats_list_page.dart';
 import '../../features/dictionary/presentation/pages/favorites_page.dart';
 import '../../features/dictionary/presentation/pages/dictionary_page.dart';
-<<<<<<< HEAD
 import '../../features/chat/presentation/chat_page.dart';
-import '../../features/dictionary/presentation/dictionary_page.dart';
-=======
-import '../../features/chat/presentation/chats_list_page.dart';
-import '../../features/dictionary/presentation/pages/favorites_page.dart';
-import '../../features/dictionary/presentation/pages/dictionary_page.dart';
->>>>>>> 8fe1ec9... feat : dictionary
 import '../../features/learning/presentation/learning_page.dart';
 import '../../features/admin/presentation/admin_page.dart';
 import '../../features/profile/presentation/profile_page.dart';
