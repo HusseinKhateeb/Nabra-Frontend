@@ -44,6 +44,8 @@ class LipReadingApi {
     bool fast = false,
     void Function(String phase)? onPhase,
   }) async {
+    // Match Postman request shape exactly: a single multipart POST with
+    // only the two file parts (audioFile, videoFile).
     final LipReadingUploadResult result = await uploadFuseFilesMultipart(
       audioFile: audioFile,
       videoFile: videoFile,
@@ -99,9 +101,8 @@ class LipReadingApi {
       final http.MultipartRequest request = http.MultipartRequest('POST', uri)
         ..headers['Authorization'] = 'Bearer $token'
         // Do not set Content-Type manually; MultipartRequest sets boundary.
-        ..fields['wait'] = 'false'
-        ..fields['timeoutSeconds'] = '300'
-        ..fields['fast'] = 'false';
+        // Keep body exactly like Postman form-data example.
+        ;
 
       request.files.add(
         await http.MultipartFile.fromPath('audioFile', audioFile.path),
@@ -109,6 +110,13 @@ class LipReadingApi {
       request.files.add(
         await http.MultipartFile.fromPath('videoFile', videoFile.path),
       );
+
+      // Enforce Postman parity: exactly 2 file parts and zero text fields.
+      if (request.fields.isNotEmpty || request.files.length != 2) {
+        throw Exception(
+          'Invalid multipart shape: expected only audioFile/videoFile.',
+        );
+      }
 
       final http.StreamedResponse streamed = await request
           .send()
@@ -119,41 +127,6 @@ class LipReadingApi {
 
       final Map<String, dynamic>? decodedJson =
           _tryDecodeJsonObjectFromText(body);
-
-      if (streamed.statusCode == 202) {
-        final String? jobIdRaw = decodedJson == null
-          ? null
-          : decodedJson['jobId']?.toString().trim();
-        final String? statusEndpointRaw = decodedJson == null
-          ? null
-          : decodedJson['statusEndpoint']?.toString().trim();
-
-        final String? jobId =
-          (jobIdRaw != null && jobIdRaw.isNotEmpty) ? jobIdRaw : null;
-        final String? statusEndpoint =
-          (statusEndpointRaw != null && statusEndpointRaw.isNotEmpty)
-            ? statusEndpointRaw
-            : null;
-
-        if (jobId == null) {
-          onPhase?.call('failed');
-          return LipReadingUploadResult(
-            success: false,
-            message: 'Async job started but no jobId returned.',
-            statusCode: streamed.statusCode,
-            responseBody: body,
-            responseJson: decodedJson,
-          );
-        }
-
-        onPhase?.call('processing');
-        return _pollFuseFilesJob(
-          token: token,
-          jobId: jobId,
-          statusEndpoint: statusEndpoint,
-          onPhase: onPhase,
-        );
-      }
 
       if (streamed.statusCode >= 200 && streamed.statusCode < 300) {
         onPhase?.call('completed');
@@ -205,129 +178,6 @@ class LipReadingApi {
         message: 'Upload failed: $e',
       );
     }
-  }
-
-  Future<LipReadingUploadResult> _pollFuseFilesJob({
-    required String token,
-    required String jobId,
-    required String? statusEndpoint,
-    void Function(String phase)? onPhase,
-  }) async {
-    final Uri uri = statusEndpoint != null && statusEndpoint.isNotEmpty
-        ? (statusEndpoint.startsWith('http')
-            ? Uri.parse(statusEndpoint)
-            : Uri.parse('${AppConfig.apiBaseUrl}$statusEndpoint'))
-        : Uri.parse(
-            '${AppConfig.apiBaseUrl}${ApiEndpoints.lipReadingAvsrFuseFilesStatus(jobId)}',
-          );
-
-    const Duration pollInterval = Duration(seconds: 2);
-    const int maxAttempts = 180;
-
-    for (int attempt = 1; attempt <= maxAttempts; attempt++) {
-      try {
-        final http.Request req = http.Request('GET', uri)
-          ..headers['Authorization'] = 'Bearer $token';
-
-        final http.StreamedResponse streamed =
-            await req.send().timeout(const Duration(seconds: 30));
-        final String body = await streamed.stream.bytesToString();
-        debugPrint(
-          '[LipReading][Poll] attempt=$attempt status=${streamed.statusCode}, body=$body',
-        );
-
-        final Map<String, dynamic>? json = _tryDecodeJsonObjectFromText(body);
-
-        if (streamed.statusCode < 200 || streamed.statusCode >= 300) {
-          onPhase?.call('failed');
-          return LipReadingUploadResult(
-            success: false,
-            message:
-                'Polling failed (${streamed.statusCode}): ${_extractErrorMessage(json ?? body)}',
-            jobId: jobId,
-            statusEndpoint: uri.toString(),
-            statusCode: streamed.statusCode,
-            responseBody: body,
-            responseJson: json,
-          );
-        }
-
-        final String status =
-            ((json?['status'] ?? json?['jobStatus'] ?? json?['state'])
-                        ?.toString() ??
-                    '')
-                .trim()
-                .toUpperCase();
-
-        if (status == 'COMPLETED' || status == 'SUCCESS' || status == 'DONE') {
-          onPhase?.call('completed');
-          final Map<String, dynamic>? resultJson = _extractResultObject(json);
-          return LipReadingUploadResult(
-            success: true,
-            message: 'Processing completed.',
-            jobId: jobId,
-            statusEndpoint: uri.toString(),
-            statusCode: streamed.statusCode,
-            responseBody: body,
-            responseJson: resultJson ?? json,
-          );
-        }
-
-        if (status == 'FAILED' || status == 'ERROR' || status == 'CANCELLED') {
-          onPhase?.call('failed');
-          return LipReadingUploadResult(
-            success: false,
-            message: 'Processing failed: ${_extractErrorMessage(json ?? body)}',
-            jobId: jobId,
-            statusEndpoint: uri.toString(),
-            statusCode: streamed.statusCode,
-            responseBody: body,
-            responseJson: json,
-          );
-        }
-      } on SocketException {
-        if (attempt == maxAttempts) {
-          onPhase?.call('failed');
-          return const LipReadingUploadResult(
-            success: false,
-            message: 'Connection lost while checking processing status.',
-          );
-        }
-      } on TimeoutException {
-        if (attempt == maxAttempts) {
-          onPhase?.call('failed');
-          return const LipReadingUploadResult(
-            success: false,
-            message: 'Timed out while waiting for processing result.',
-          );
-        }
-      } on IOException {
-        if (attempt == maxAttempts) {
-          onPhase?.call('failed');
-          return const LipReadingUploadResult(
-            success: false,
-            message: 'Unexpected stream end while polling result.',
-          );
-        }
-      }
-
-      await Future<void>.delayed(pollInterval);
-    }
-
-    onPhase?.call('failed');
-    return const LipReadingUploadResult(
-      success: false,
-      message: 'Processing did not complete in time. Please try again.',
-    );
-  }
-
-  Map<String, dynamic>? _extractResultObject(Map<String, dynamic>? root) {
-    if (root == null) return null;
-    final dynamic result = root['result'] ?? root['data'] ?? root['payload'];
-    if (result is Map<String, dynamic>) {
-      return result;
-    }
-    return root;
   }
 
   String _extractErrorMessage(dynamic body) {
