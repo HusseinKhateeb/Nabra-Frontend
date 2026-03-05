@@ -8,27 +8,103 @@ class AuthApi {
 
   final DioClient _client;
 
-  Future<AuthTokens> login({required String email, required String password}) async {
+  // ===============================
+  // LOGIN
+  // ===============================
+  Future<AuthTokens> login({
+    required String username,
+    required String password,
+  }) async {
     final Response res = await _client.dio.post(
       ApiEndpoints.authLogin,
-      data: {'email': email, 'password': password},
+      data: {
+        'username': username,
+        'password': password,
+      },
     );
+
     return AuthTokens.fromJson(res.data as Map<String, dynamic>);
   }
 
+  // ===============================
+  // GOOGLE LOGIN ✅
+  // ===============================
+  Future<AuthTokens> googleLogin({
+    required String idToken,
+  }) async {
+    final Response res = await _client.dio.post(
+      ApiEndpoints.authGoogle,
+      data: {'idToken': idToken},
+    );
+
+    return AuthTokens.fromJson(res.data);
+  }
+
+  // ===============================
+  // REGISTER
+  // ===============================
   Future<void> register({
-    required String fullName,
+    required String username,
     required String email,
     required String password,
-    String preferredLanguage = 'en',
+    required String displayName,
   }) async {
     await _client.dio.post(
       ApiEndpoints.authRegister,
       data: {
-        'fullName': fullName,
+        'username': username,
         'email': email,
         'password': password,
-        'preferredLanguage': preferredLanguage,
+        'displayName': displayName,
+        'userType': 'USER',
+      },
+    );
+  }
+
+  // ===============================
+  // FORGOT PASSWORD
+  // ===============================
+  Future<void> forgotPassword({
+    required String email,
+  }) async {
+    await _client.dio.post(
+      ApiEndpoints.authForgotPassword,
+      data: {'email': email},
+    );
+  }
+
+  // ===============================
+  // VERIFY RESET CODE
+  // ===============================
+  Future<void> verifyResetCode({
+    required String email,
+    required String code,
+  }) async {
+    await _client.dio.post(
+      ApiEndpoints.authVerifyResetCode,
+      data: {
+        'email': email,
+        'code': code,
+      },
+    );
+  }
+
+  // ===============================
+  // RESET PASSWORD
+  // ===============================
+  Future<void> resetPassword({
+    required String email,
+    required String code,
+    required String newPassword,
+    required String confirmPassword,
+  }) async {
+    await _client.dio.post(
+      ApiEndpoints.authResetPassword,
+      data: {
+        'email': email,
+        'code': code,
+        'newPassword': newPassword,
+        'confirmPassword': confirmPassword,
       },
     );
   }

@@ -1,24 +1,34 @@
 class ApiEndpoints {
-  static const String authRegister = '/auth/register';
-  static const String authLogin = '/auth/login';
+  static const String authRegister = '/v1/auth/register';
+  static const String authLogin = '/v1/auth/login';
 
-  static const String me = '/users/me';
+  // 🔐 Google Auth
+  static const String authGoogle = '/v1/auth/google';
 
-  static const String sessionsStart = '/sessions/start';
-  static const String sessionsStop = '/sessions/stop';
-  static const String sessionsHistory = '/sessions/history';
+  static const String authForgotPassword = '/v1/auth/forgot-password';
+  static const String authVerifyResetCode = '/v1/auth/verify-reset-code';
+  static const String authResetPassword = '/v1/auth/reset-password';
 
-  static const String chats = '/chats';
-  static const String messages = '/messages';
+  static const String me = '/v1/users/me';
 
-  static const String dictionary = '/dictionary';
-  static const String learning = '/learning';
-  static const String smartPrediction = '/predictions';
+  static const String sessionsStart = '/v1/sessions/start';
+  static const String sessionsStop = '/v1/sessions/stop';
+  static const String sessionsHistory = '/v1/sessions/history';
 
   static const String lipReadingInfer = '/v1/lipreading/infer';
   static const String lipReadingAvsrFuse = '/v1/lipreading/avsr/fuse';
   static const String lipReadingAvsrFuseFiles = '/v1/lipreading/avsr/fuse-files';
 
-  static const String reports = '/reports';
-  static const String adminReports = '/admin/reports';
+  //current change
+  // static const String reports = '/reports';
+  // static const String adminReports = '/admin/reports';
+  static const String chats = '/v1/chats';
+  static const String messages = '/v1/messages';
+  static const String dictionary = '/visual-dictionary';
+
+  static const String learning = '/v1/learning';
+  static const String smartPrediction = '/v1/predictions';
+
+  static const String reports = '/v1/reports';
+  static const String adminReports = '/v1/admin/reports';
 }

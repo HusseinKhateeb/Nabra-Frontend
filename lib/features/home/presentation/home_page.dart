@@ -25,7 +25,7 @@ class HomePage extends StatelessWidget {
           _NavTile(
             title: 'Chat',
             subtitle: 'Send/receive messages (text / voice transcript)',
-            onTap: () => context.push(AppRoutes.chat),
+            onTap: () => context.push(AppRoutes.chats),
           ),
           _NavTile(
             title: 'Visual Dictionary',
