@@ -38,6 +38,8 @@ dependencies:
 
   # 🧰 Utils
   equatable: ^2.0.5
+  freezed_annotation: ^2.4.1
+  json_annotation: ^4.9.0
 
   # ▶️ VIDEO PLAYER (ضروري للقاموس البصري)
   video_player: ^2.8.2
@@ -46,14 +48,18 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^5.0.0
+  freezed_annotation: ^2.4.1
+  build_runner: ^2.4.9
+  freezed: ^2.4.2
+  json_serializable: ^6.7.1
 
 flutter:
   uses-material-design: true
 
   assets:
-    - assets/images/
-    - assets/icons/
-    - assets/translations/
+    - lib/assets/images/
+    - lib/assets/icons/
+    - lib/assets/translations/
 
   # Enable Flutter's gen-l10n (you can add arb files later)
   generate: true
