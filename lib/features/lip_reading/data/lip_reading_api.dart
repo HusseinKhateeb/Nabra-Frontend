@@ -1,182 +1,94 @@
-import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:flutter/foundation.dart';
-import 'package:http/http.dart' as http;
+import 'package:dio/dio.dart';
 
-import '../../../core/config/app_config.dart';
 import '../../../core/config/api_endpoints.dart';
-import '../../../core/network/token_storage.dart';
-import '../../../core/router/app_router.dart';
-import '../../../core/router/app_routes.dart';
+import '../../../core/network/dio_client.dart';
 import '../domain/avsr_models.dart';
 
-class LipReadingUploadResult {
-  const LipReadingUploadResult({
-    required this.success,
-    required this.message,
-    this.jobId,
-    this.statusEndpoint,
-    this.statusCode,
-    this.responseBody,
-    this.responseJson,
-  });
-
-  final bool success;
-  final String message;
-  final String? jobId;
-  final String? statusEndpoint;
-  final int? statusCode;
-  final String? responseBody;
-  final Map<String, dynamic>? responseJson;
-}
-
 class LipReadingApi {
-  LipReadingApi(this._tokenStorage);
+  LipReadingApi(this._client);
 
-  final TokenStorage _tokenStorage;
+  final DioClient _client;
 
   Future<AvsrFusionResponse> fuseFiles({
     required File audioFile,
     required File videoFile,
     int frameCount = 25,
     bool fast = false,
-    void Function(String phase)? onPhase,
   }) async {
-    // Match Postman request shape exactly: a single multipart POST with
-    // only the two file parts (audioFile, videoFile).
-    final LipReadingUploadResult result = await uploadFuseFilesMultipart(
-      audioFile: audioFile,
-      videoFile: videoFile,
-      onPhase: onPhase,
-    );
+    final Map<String, dynamic> data = {
+      'audioFile': await MultipartFile.fromFile(
+        audioFile.path,
+        filename: audioFile.uri.pathSegments.last,
+      ),
+      'videoFile': await MultipartFile.fromFile(
+        videoFile.path,
+        filename: videoFile.uri.pathSegments.last,
+      ),
+      'wait': 'true',
+      'timeoutSeconds': '240',
+      'frameCount': frameCount.toString(),
+      'fast': fast.toString(),
+    };
+    final FormData formData = FormData.fromMap(data);
 
-    if (!result.success) {
-      throw Exception(result.message);
-    }
-
-    if (result.responseJson != null) {
-      return _parseFusionResponse(result.responseJson!);
-    }
-
-    return _parseFusionResponse(result.responseBody ?? '');
-  }
-
-  Future<void> _validateFileForUpload(File file, String label) async {
-    final bool exists = await file.exists();
-    if (!exists) {
-      throw Exception('$label file does not exist: ${file.path}');
-    }
-    final int size = await file.length();
-    debugPrint('[LipReading][Upload] $label path=${file.path}, size=$size bytes');
-    if (size <= 0) {
-      throw Exception('$label file is empty: ${file.path}');
-    }
-  }
-
-  Future<LipReadingUploadResult> uploadFuseFilesMultipart({
-    required File audioFile,
-    required File videoFile,
-    void Function(String phase)? onPhase,
-  }) async {
     try {
-      onPhase?.call('uploading');
-      await _validateFileForUpload(audioFile, 'audioFile');
-      await _validateFileForUpload(videoFile, 'videoFile');
+      final Response<dynamic> res = await _client.dio.post(
+        ApiEndpoints.lipReadingAvsrFuseFiles,
+        data: formData,
+        options: Options(
+          contentType: 'multipart/form-data',
+          responseType: ResponseType.plain,
+          sendTimeout: const Duration(minutes: 5),
+          receiveTimeout: const Duration(minutes: 5),
+        ),
+      );
 
-      final String token = (await _tokenStorage.readAccessToken() ?? '').trim();
-      if (token.isEmpty) {
-        appRouter.go(AppRoutes.login);
-        return const LipReadingUploadResult(
-          success: false,
-          message: 'Session expired. Please login again.',
-        );
+      return _parseFusionResponse(res.data);
+    } on DioException catch (error) {
+      final int? statusCode = error.response?.statusCode;
+      final String backendMessage = _extractErrorMessage(error.response?.data);
+      final String fallbackMessage = (error.message ?? '').trim();
+      final String innerError = (error.error?.toString() ?? '').trim();
+      final String requestMethod = error.requestOptions.method;
+      final String requestUri = error.requestOptions.uri.toString();
+      final String detail = backendMessage.isNotEmpty
+          ? backendMessage
+        : (fallbackMessage.isNotEmpty
+          ? fallbackMessage
+          : (innerError.isNotEmpty ? innerError : 'Request failed.'));
+      final String friendlyDetail = _toUserFriendlyMessage(detail);
+
+      final String message;
+      switch (error.type) {
+        case DioExceptionType.connectionTimeout:
+        case DioExceptionType.sendTimeout:
+        case DioExceptionType.receiveTimeout:
+          message = 'Request timed out. Please try again.';
+          break;
+        case DioExceptionType.connectionError:
+          message = 'Cannot reach server. Check network and API base URL. [$requestMethod $requestUri] $friendlyDetail';
+          break;
+        case DioExceptionType.badResponse:
+          if (statusCode != null) {
+            message = 'Server error ($statusCode): $friendlyDetail';
+          } else {
+            message = 'Server returned an invalid response: $friendlyDetail';
+          }
+          break;
+        case DioExceptionType.cancel:
+          message = 'Request was cancelled.';
+          break;
+        case DioExceptionType.badCertificate:
+          message = 'Secure connection failed (certificate error). [$requestMethod $requestUri] $friendlyDetail';
+          break;
+        case DioExceptionType.unknown:
+          message = 'Request failed. [$requestMethod $requestUri] $friendlyDetail';
+          break;
       }
-
-      final Uri uri = Uri.parse(
-        '${AppConfig.apiBaseUrl}${ApiEndpoints.lipReadingAvsrFuseFiles}',
-      );
-
-      final http.MultipartRequest request = http.MultipartRequest('POST', uri)
-        ..headers['Authorization'] = 'Bearer $token'
-        // Do not set Content-Type manually; MultipartRequest sets boundary.
-        // Keep body exactly like Postman form-data example.
-        ;
-
-      request.files.add(
-        await http.MultipartFile.fromPath('audioFile', audioFile.path),
-      );
-      request.files.add(
-        await http.MultipartFile.fromPath('videoFile', videoFile.path),
-      );
-
-      // Enforce Postman parity: exactly 2 file parts and zero text fields.
-      if (request.fields.isNotEmpty || request.files.length != 2) {
-        throw Exception(
-          'Invalid multipart shape: expected only audioFile/videoFile.',
-        );
-      }
-
-      final http.StreamedResponse streamed = await request
-          .send()
-          .timeout(const Duration(minutes: 6));
-
-      final String body = await streamed.stream.bytesToString();
-      debugPrint('[LipReading][Upload] url=$uri, status=${streamed.statusCode}, body=$body');
-
-      final Map<String, dynamic>? decodedJson =
-          _tryDecodeJsonObjectFromText(body);
-
-      if (streamed.statusCode >= 200 && streamed.statusCode < 300) {
-        onPhase?.call('completed');
-        return LipReadingUploadResult(
-          success: true,
-          message: 'Upload completed.',
-          jobId: decodedJson?['jobId']?.toString(),
-          statusEndpoint: decodedJson?['statusEndpoint']?.toString(),
-          statusCode: streamed.statusCode,
-          responseBody: body,
-          responseJson: decodedJson,
-        );
-      }
-
-      onPhase?.call('failed');
-
-      return LipReadingUploadResult(
-        success: false,
-        message:
-            'Server error (${streamed.statusCode}): ${_extractErrorMessage(decodedJson ?? body)}',
-        jobId: decodedJson?['jobId']?.toString(),
-        statusEndpoint: decodedJson?['statusEndpoint']?.toString(),
-        statusCode: streamed.statusCode,
-        responseBody: body,
-        responseJson: decodedJson,
-      );
-    } on SocketException {
-      onPhase?.call('failed');
-      return const LipReadingUploadResult(
-        success: false,
-        message: 'Cannot connect to server. Check network and backend status.',
-      );
-    } on TimeoutException {
-      onPhase?.call('failed');
-      return const LipReadingUploadResult(
-        success: false,
-        message: 'Upload timed out. Please try again with shorter recording.',
-      );
-    } on IOException {
-      onPhase?.call('failed');
-      return const LipReadingUploadResult(
-        success: false,
-        message: 'Upload stream ended unexpectedly. Please retry.',
-      );
-    } catch (e) {
-      onPhase?.call('failed');
-      return LipReadingUploadResult(
-        success: false,
-        message: 'Upload failed: $e',
-      );
+      throw Exception(message);
     }
   }
 
