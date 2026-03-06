@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/router/app_routes.dart';
 import '../../providers/dictionary_providers.dart';
 import '../widgets/word_card.dart';
 import '../../../../core/widgets/main_bottom_nav_bar.dart';
@@ -40,20 +41,23 @@ class FavoritesPage extends ConsumerWidget {
       ),
 
       bottomNavigationBar: MainBottomNavBar(
-        currentIndex: 1,
+        currentIndex: 0,
         onTap: (index) {
           switch (index) {
             case 0:
-              context.go('/home');
+              context.go(AppRoutes.dictionary);
               break;
             case 1:
-              break; // نحن في المفضلة
+              context.go(AppRoutes.sessions);
             case 2:
               context.go('/dictionary');
-              break;
+              context.go(AppRoutes.lipReading);
             case 3:
               context.go('/profile');
+              context.go(AppRoutes.profile);
               break;
+            case 4:
+              context.go(AppRoutes.chats);
           }
         },
       ),

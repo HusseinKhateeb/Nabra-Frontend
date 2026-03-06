@@ -5,9 +5,12 @@ import 'package:camera/camera.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart';
 
+import '../../../core/router/app_routes.dart';
+import '../../../core/widgets/main_bottom_nav_bar.dart';
 import '../domain/avsr_models.dart';
 import 'lip_reading_providers.dart';
 
@@ -376,11 +379,36 @@ class _LipReadingPageState extends ConsumerState<LipReadingPage> {
 
     if (!_isSupportedPlatform) {
       return Scaffold(
-        backgroundColor: Colors.white,
+        backgroundColor: const Color(0xFFF7F7F7),
         appBar: AppBar(
-          title: const Text('AVSR', style: TextStyle(color: _darkRed, fontWeight: FontWeight.bold)),
-          backgroundColor: _grey,
-          elevation: 0,
+          title: const Text('Lip Reading', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+          backgroundColor: Colors.white,
+          foregroundColor: const Color(0xFFE53935),
+          elevation: 0.5,
+        ),
+        bottomNavigationBar: SafeArea(
+          top: false,
+          child: MainBottomNavBar(
+            currentIndex: 2,
+            onTap: (index) {
+              switch (index) {
+                case 0:
+                  context.go(AppRoutes.dictionary);
+                  break;
+                case 1:
+                  context.go(AppRoutes.sessions);
+                  break;
+                case 2:
+                  break;
+                case 3:
+                  context.go(AppRoutes.profile);
+                  break;
+                case 4:
+                  context.go(AppRoutes.chats);
+                  break;
+              }
+            },
+          ),
         ),
         body: const Center(
           child: Padding(
@@ -396,11 +424,12 @@ class _LipReadingPageState extends ConsumerState<LipReadingPage> {
     }
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFFF7F7F7),
       appBar: AppBar(
-        title: const Text('AVSR Recognition', style: TextStyle(color: _darkRed, fontWeight: FontWeight.bold)),
-        backgroundColor: _grey,
-        elevation: 0,
+        title: const Text('Lip Reading', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+        backgroundColor: Colors.white,
+        foregroundColor: const Color(0xFFE53935),
+        elevation: 0.5,
         centerTitle: true,
       ),
       body: SafeArea(
@@ -582,6 +611,30 @@ class _LipReadingPageState extends ConsumerState<LipReadingPage> {
               _ResultSection(state: state),
             ],
           ),
+        ),
+      ),
+      bottomNavigationBar: SafeArea(
+        top: false,
+        child: MainBottomNavBar(
+          currentIndex: 2,
+          onTap: (index) {
+            switch (index) {
+              case 0:
+                context.go(AppRoutes.dictionary);
+                break;
+              case 1:
+                context.go(AppRoutes.sessions);
+                break;
+              case 2:
+                break;
+              case 3:
+                context.go(AppRoutes.profile);
+                break;
+              case 4:
+                context.go(AppRoutes.chats);
+                break;
+            }
+          },
         ),
       ),
     );

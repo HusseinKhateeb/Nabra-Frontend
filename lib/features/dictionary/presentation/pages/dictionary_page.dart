@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/router/app_routes.dart';
 import '../../providers/dictionary_providers.dart';
 import '../widgets/category_tabs.dart';
 import '../widgets/word_card.dart';
@@ -46,19 +47,22 @@ class DictionaryPage extends ConsumerWidget {
 
       /// Bottom Navigation
       bottomNavigationBar: MainBottomNavBar(
-        currentIndex: 2,
+        currentIndex: 0,
         onTap: (index) {
           switch (index) {
             case 0:
-              context.go('/home');
               break;
             case 1:
-              context.go('/search');
+              context.go(AppRoutes.sessions);
               break;
             case 2:
+              context.go(AppRoutes.lipReading);
               break;
             case 3:
-              context.go('/profile');
+              context.go(AppRoutes.profile);
+              break;
+            case 4:
+              context.go(AppRoutes.chats);
               break;
           }
         },
@@ -123,7 +127,7 @@ class DictionaryPage extends ConsumerWidget {
                         color: const Color(0xFFE53935),
                         tooltip: 'المفضلة',
                         onPressed: () {
-                          context.go('/favorites');
+                          context.go(AppRoutes.favorites);
                         },
                       ),
                     ),

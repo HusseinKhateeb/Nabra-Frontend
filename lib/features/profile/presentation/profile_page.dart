@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../core/providers.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/widgets/main_bottom_nav_bar.dart';
 import 'providers/profile_providers.dart';
@@ -248,6 +249,42 @@ class ProfilePage extends ConsumerWidget {
                   ),
                 ),
 
+                const SizedBox(height: 16),
+
+                // Logout section
+                Container(
+                  color: Colors.white,
+                  padding: const EdgeInsets.all(16),
+                  child: SizedBox(
+                    width: double.infinity,
+                    height: 48,
+                    child: ElevatedButton.icon(
+                      onPressed: () async {
+                        await ref.read(tokenStorageProvider).clear();
+                        if (!context.mounted) return;
+                        context.go(AppRoutes.login);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFD32F2F),
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        elevation: 0,
+                      ),
+                      icon: const Icon(Icons.logout),
+                      label: const Text(
+                        'تسجيل الخروج',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                        ),
+                        textDirection: TextDirection.rtl,
+                      ),
+                    ),
+                  ),
+                ),
+
                 const SizedBox(height: 20),
               ],
             ),
@@ -265,7 +302,7 @@ class ProfilePage extends ConsumerWidget {
               context.go(AppRoutes.favorites);
               break;
             case 2:
-              // Camera action
+              context.go(AppRoutes.lipReading);
               break;
             case 3:
               // Already on profile

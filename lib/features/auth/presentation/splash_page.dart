@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/network/token_storage.dart';
 import '../../../core/providers.dart';
 import '../../../core/router/app_routes.dart';
+import '../../../shared/constants.dart';
 
 class SplashPage extends ConsumerStatefulWidget {
   const SplashPage({super.key});
@@ -22,12 +23,19 @@ class _SplashPageState extends ConsumerState<SplashPage> {
 
   Future<void> _bootstrap() async {
     final TokenStorage storage = ref.read(tokenStorageProvider);
+    final secureStorage = ref.read(secureStorageProvider);
     final token = await storage.readAccessToken();
+    final onboardingDone =
+        await secureStorage.read(key: StorageKeys.onboardingCompleted);
+
     if (!mounted) return;
+
     if (token != null && token.isNotEmpty) {
-      context.go(AppRoutes.home);
-    } else {
+      context.go(AppRoutes.lipReading);
+    } else if (onboardingDone == 'true') {
       context.go(AppRoutes.login);
+    } else {
+      context.go(AppRoutes.welcome);
     }
   }
 

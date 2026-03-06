@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../core/router/app_routes.dart';
+import '../../../core/widgets/main_bottom_nav_bar.dart';
 import '../domain/session_models.dart';
 import '../utils/session_formatters.dart';
 import 'session_history_controller.dart';
@@ -91,11 +94,17 @@ class _SessionsPageState extends ConsumerState<SessionsPage> {
     );
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFFF7F7F7),
       appBar: AppBar(
-        backgroundColor: _darkRed,
-        foregroundColor: Colors.white,
+        backgroundColor: Colors.white,
+        foregroundColor: const Color(0xFFE53935),
         title: const Text('Session History'),
+        titleTextStyle: const TextStyle(
+          color: Colors.black,
+          fontSize: 20,
+          fontWeight: FontWeight.bold,
+        ),
+        elevation: 0.5,
         actions: <Widget>[
           IconButton(
             tooltip: 'Clear all history',
@@ -213,6 +222,30 @@ class _SessionsPageState extends ConsumerState<SessionsPage> {
             onSizeChanged: (int newSize) => controller.setSize(newSize),
           ),
         ],
+      ),
+      bottomNavigationBar: SafeArea(
+        top: false,
+        child: MainBottomNavBar(
+          currentIndex: 1,
+          onTap: (int index) {
+            switch (index) {
+              case 0:
+                context.go(AppRoutes.dictionary);
+                break;
+              case 1:
+                break;
+              case 2:
+                context.go(AppRoutes.lipReading);
+                break;
+              case 3:
+                context.go(AppRoutes.profile);
+                break;
+              case 4:
+                context.go(AppRoutes.chats);
+                break;
+            }
+          },
+        ),
       ),
     );
   }

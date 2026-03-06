@@ -7,6 +7,8 @@ import '../../../core/providers.dart';
 import 'chat_room_page.dart';
 import '../../../core/widgets/main_bottom_nav_bar.dart';
 import 'new_chat_page.dart'; // ✅ جديد
+import '../../../core/router/app_routes.dart';
+import 'package:go_router/go_router.dart';
 
 class ChatsListPage extends ConsumerStatefulWidget {
   const ChatsListPage({super.key});
@@ -201,7 +203,22 @@ class _ChatsListPageState extends ConsumerState<ChatsListPage> {
         child: MainBottomNavBar(
           currentIndex: 4,
           onTap: (index) {
-            // اربطه بالراوتينغ لاحقًا
+            switch (index) {
+              case 0:
+                context.go(AppRoutes.dictionary);
+                break;
+              case 1:
+                context.go(AppRoutes.sessions);
+                break;
+              case 2:
+                context.go(AppRoutes.lipReading);
+                break;
+              case 3:
+                context.go(AppRoutes.profile);
+                break;
+              case 4:
+                break;
+            }
           },
         ),
       ),

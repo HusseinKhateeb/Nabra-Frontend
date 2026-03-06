@@ -37,7 +37,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         );
       }
       if (prev is AsyncLoading && next is AsyncData) {
-        context.go(AppRoutes.home);
+        context.go(AppRoutes.lipReading);
       }
     });
 

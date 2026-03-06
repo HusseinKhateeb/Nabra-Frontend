@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/router/app_routes.dart';
+import '../../../shared/constants.dart';
 
 class PermissionsPage extends StatelessWidget {
   const PermissionsPage({Key? key}) : super(key: key);
+
+  static const FlutterSecureStorage _storage = FlutterSecureStorage();
 
   @override
   Widget build(BuildContext context) {
@@ -171,7 +175,12 @@ class PermissionsPage extends StatelessWidget {
                   width: double.infinity,
                   height: 56,
                   child: ElevatedButton(
-                    onPressed: () {
+                    onPressed: () async {
+                      await _storage.write(
+                        key: StorageKeys.onboardingCompleted,
+                        value: 'true',
+                      );
+                      if (!context.mounted) return;
                       context.go(AppRoutes.login);
                     },
                     style: ElevatedButton.styleFrom(

@@ -42,7 +42,7 @@ bool _isPublicRoute(String path) {
 }
 
 final GoRouter appRouter = GoRouter(
-  initialLocation: AppRoutes.welcome,
+  initialLocation: AppRoutes.splash,
   redirect: (context, state) async {
     final String path = state.matchedLocation;
     if (_isPublicRoute(path)) return null;
