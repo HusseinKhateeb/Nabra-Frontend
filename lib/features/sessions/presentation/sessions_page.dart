@@ -8,7 +8,7 @@ import '../domain/session_models.dart';
 import '../utils/session_formatters.dart';
 import 'session_history_controller.dart';
 
-const Color _darkRed = Color(0xFF8B0000);
+const Color _darkRed = Color(0xFFD32F2F);
 
 class SessionsPage extends ConsumerStatefulWidget {
   const SessionsPage({super.key});
@@ -18,6 +18,14 @@ class SessionsPage extends ConsumerStatefulWidget {
 }
 
 class _SessionsPageState extends ConsumerState<SessionsPage> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(sessionHistoryControllerProvider.notifier).refresh();
+    });
+  }
+
   Future<void> _confirmAndClearHistory(
     BuildContext context,
     SessionHistoryController controller,
@@ -70,32 +78,34 @@ class _SessionsPageState extends ConsumerState<SessionsPage> {
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
-        backgroundColor: const Color(0xFFF7F7F7),
+        backgroundColor: const Color(0xFFF5F5F5),
         appBar: AppBar(
           backgroundColor: Colors.white,
           elevation: 0.5,
           automaticallyImplyLeading: false,
           titleSpacing: 0,
-          title: const Padding(
-            padding: EdgeInsets.only(right: 16),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: <Widget>[
-                Text(
-                  'سجل الجلسات',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black,
-                    fontSize: 18,
-                  ),
+          leading: IconButton(
+            tooltip: 'العودة',
+            icon: const Icon(
+              Icons.arrow_forward_ios,
+              color: Colors.red,
+              size: 18,
+              textDirection: TextDirection.ltr,
+            ),
+            onPressed: () => context.go(AppRoutes.lipReading),
+          ),
+          title: const Align(
+            alignment: Alignment.centerRight,
+            child: Padding(
+              padding: EdgeInsets.only(right: 8),
+              child: Text(
+                'سجل الجلسات',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black,
+                  fontSize: 18,
                 ),
-                SizedBox(width: 8),
-                Icon(
-                  Icons.arrow_forward_ios,
-                  color: Colors.red,
-                  size: 18,
-                ),
-              ],
+              ),
             ),
           ),
           actions: <Widget>[
@@ -113,9 +123,13 @@ class _SessionsPageState extends ConsumerState<SessionsPage> {
           if (state.loading) const LinearProgressIndicator(minHeight: 2),
           if (state.error != null)
             Container(
-              width: double.infinity,
-              color: const Color(0xFFFFE5E5),
+              margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
               padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFFFFCDD2)),
+              ),
               child: Row(
                 children: <Widget>[
                   const Icon(Icons.warning_amber_rounded, color: _darkRed),
@@ -139,7 +153,7 @@ class _SessionsPageState extends ConsumerState<SessionsPage> {
                 : RefreshIndicator(
                     onRefresh: controller.refresh,
                     child: ListView.builder(
-                      padding: const EdgeInsets.all(12),
+                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
                       itemCount: state.sessions.length,
                       itemBuilder: (BuildContext context, int index) {
                         final SessionResponse current = state.sessions[index];
@@ -223,10 +237,15 @@ class _SessionCard extends StatelessWidget {
       session.content?.result?.audioText ?? session.resultText,
     );
 
-    return Card(
-      margin: const EdgeInsets.only(bottom: 10),
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(12),
+        padding: EdgeInsets.zero,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
@@ -322,9 +341,12 @@ class _PaginationBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
-      decoration: const BoxDecoration(
-        border: Border(top: BorderSide(color: Color(0xFFEEEEEE))),
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFFE0E0E0)),
       ),
       child: Row(
         children: <Widget>[
@@ -345,13 +367,22 @@ class _EmptySessions extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: const <Widget>[
-          Icon(Icons.history, size: 56, color: Colors.grey),
-          SizedBox(height: 8),
-          Text('لا توجد جلسات حتى الآن.'),
-        ],
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16),
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: const <Widget>[
+            Icon(Icons.history, size: 56, color: Colors.grey),
+            SizedBox(height: 8),
+            Text('لا توجد جلسات حتى الآن.'),
+          ],
+        ),
       ),
     );
   }

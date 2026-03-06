@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -9,6 +11,13 @@ import '../../../core/providers.dart';
 
 class NewChatPage extends ConsumerWidget {
   const NewChatPage({super.key});
+
+  String _extractUserIdFromJwt(String token) {
+    final parts = token.split('.');
+    final payload = utf8.decode(base64Url.decode(base64Url.normalize(parts[1])));
+    final map = jsonDecode(payload) as Map<String, dynamic>;
+    return map['sub'].toString();
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -95,17 +104,38 @@ class NewChatPage extends ConsumerWidget {
                 onTap: () async {
                   final chatRepo = ref.read(chatRepositoryProvider);
                   final token = await ref.read(tokenStorageProvider).getToken();
+                  if (token == null || token.isEmpty) {
+                    if (!context.mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('الجلسة منتهية، سجل الدخول مرة أخرى.')),
+                    );
+                    return;
+                  }
 
-                  final chat = await chatRepo.createChat(
-                    participantUserId: u.id,
-                  );
+                  final String myUserId = _extractUserIdFromJwt(token);
 
+                  final chats = await chatRepo.getChats();
+                  final existingChat = chats.where((chat) {
+                    final hasSelectedUser =
+                        chat.participants.any((participant) => participant.id == u.id);
+                    final hasCurrentUser =
+                        chat.participants.any((participant) => participant.id == myUserId);
+                    return hasSelectedUser && hasCurrentUser;
+                  }).toList();
+
+                  final targetChat = existingChat.isNotEmpty
+                      ? existingChat.first
+                      : await chatRepo.createChat(
+                          participantUserId: u.id,
+                        );
+
+                  if (!context.mounted) return;
                   Navigator.pushReplacement(
                     context,
                     MaterialPageRoute(
                       builder: (_) => ChatRoomPage(
-                        chatId: chat.id,
-                        token: token!,
+                        chatId: targetChat.id,
+                        token: token,
                         otherUserName: u.displayName,
                       ),
                     ),

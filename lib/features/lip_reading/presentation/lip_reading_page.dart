@@ -14,12 +14,12 @@ import '../../../core/widgets/main_bottom_nav_bar.dart';
 import '../domain/avsr_models.dart';
 import 'lip_reading_providers.dart';
 
-// Dark red theme colors
-const Color _darkRed = Color(0xFF8B0000);
-const Color _lightRed = Color(0xFFDC143C);
+// Unified app red palette (matches login/profile/chat tone)
+const Color _darkRed = Color(0xFFD32F2F);
+const Color _lightRed = Color(0xFFE53935);
 const Color _black = Color(0xFF222222);
 const Color _grey = Color(0xFFEEEEEE);
-const Color _cardBg = Color(0xFFF8F8F8);
+const Color _pageBg = Color(0xFFF5F5F5);
 
 const int _videoCaptureDurationMs = 1000;
 const int _audioCaptureDurationMs = 1000;
@@ -381,32 +381,18 @@ class _LipReadingPageState extends ConsumerState<LipReadingPage> {
       return Directionality(
         textDirection: TextDirection.rtl,
         child: Scaffold(
-          backgroundColor: const Color(0xFFF7F7F7),
+          backgroundColor: _pageBg,
           appBar: AppBar(
             backgroundColor: Colors.white,
             elevation: 0.5,
             automaticallyImplyLeading: false,
-            titleSpacing: 0,
-            title: const Padding(
-              padding: EdgeInsets.only(right: 16),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: <Widget>[
-                  Text(
-                    'قراءة الشفاه',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black,
-                      fontSize: 18,
-                    ),
-                  ),
-                  SizedBox(width: 8),
-                  Icon(
-                    Icons.arrow_forward_ios,
-                    color: Colors.red,
-                    size: 18,
-                  ),
-                ],
+            centerTitle: true,
+            title: const Text(
+              'قراءة الشفاه',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: Colors.black,
+                fontSize: 18,
               ),
             ),
           ),
@@ -450,32 +436,18 @@ class _LipReadingPageState extends ConsumerState<LipReadingPage> {
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
-      backgroundColor: const Color(0xFFF7F7F7),
+      backgroundColor: _pageBg,
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0.5,
         automaticallyImplyLeading: false,
-        titleSpacing: 0,
-        title: const Padding(
-          padding: EdgeInsets.only(right: 16),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: <Widget>[
-              Text(
-                'قراءة الشفاه',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black,
-                  fontSize: 18,
-                ),
-              ),
-              SizedBox(width: 8),
-              Icon(
-                Icons.arrow_forward_ios,
-                color: Colors.red,
-                size: 18,
-              ),
-            ],
+        centerTitle: true,
+        title: const Text(
+          'قراءة الشفاه',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: Colors.black,
+            fontSize: 18,
           ),
         ),
       ),
@@ -486,18 +458,10 @@ class _LipReadingPageState extends ConsumerState<LipReadingPage> {
             children: [
               // Camera preview card
               Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(24),
-                  boxShadow: [
-                    BoxShadow(
-                      color: _darkRed.withOpacity(0.08),
-                      blurRadius: 20,
-                      offset: const Offset(0, 10),
-                    ),
-                  ],
-                ),
+                color: Colors.white,
+                padding: const EdgeInsets.all(12),
                 child: ClipRRect(
-                  borderRadius: BorderRadius.circular(24),
+                  borderRadius: BorderRadius.circular(12),
                   child: _initializing
                       ? Container(
                           color: _grey,
@@ -516,7 +480,7 @@ class _LipReadingPageState extends ConsumerState<LipReadingPage> {
                             )
                           : Center(
                               child: AspectRatio(
-                                aspectRatio: 3/4, // Typical phone camera ratio
+                                aspectRatio: 3 / 4,
                                 child: ClipRect(
                                   child: Stack(
                                     fit: StackFit.expand,
@@ -542,7 +506,7 @@ class _LipReadingPageState extends ConsumerState<LipReadingPage> {
                                       if (_isCapturing)
                                         Container(
                                           decoration: BoxDecoration(
-                                            border: Border.all(color: _darkRed, width: 4),
+                                            border: Border.all(color: _darkRed, width: 3),
                                           ),
                                         ),
                                     ],
@@ -559,11 +523,11 @@ class _LipReadingPageState extends ConsumerState<LipReadingPage> {
                 duration: const Duration(milliseconds: 300),
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 decoration: BoxDecoration(
-                  color: _grey,
-                  borderRadius: BorderRadius.circular(12),
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(8),
                   border: Border.all(
-                    color: uploading ? _darkRed : _grey,
-                    width: 2,
+                    color: uploading ? _darkRed : const Color(0xFFE0E0E0),
+                    width: 1,
                   ),
                 ),
                 child: Row(
@@ -605,13 +569,12 @@ class _LipReadingPageState extends ConsumerState<LipReadingPage> {
                   onPressed: uploading ? null : _startCaptureAndSend,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: _darkRed,
-                    disabledBackgroundColor: _grey,
+                    disabledBackgroundColor: Colors.grey,
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius: BorderRadius.circular(8),
                     ),
-                    elevation: uploading ? 0 : 8,
-                    shadowColor: _darkRed.withOpacity(0.15),
+                    elevation: 0,
                   ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -645,7 +608,7 @@ class _LipReadingPageState extends ConsumerState<LipReadingPage> {
                     foregroundColor: _darkRed,
                     side: BorderSide(color: uploading ? _grey : _darkRed, width: 2),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(8),
                     ),
                   ),
                   icon: const Icon(Icons.refresh),
@@ -699,9 +662,9 @@ class _ResultSection extends StatelessWidget {
       loading: () => Container(
         padding: const EdgeInsets.all(32),
         decoration: BoxDecoration(
-          color: _grey,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: _darkRed.withOpacity(0.15), width: 2),
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: const Color(0xFFE0E0E0)),
         ),
         child: const Column(
           children: [
@@ -719,9 +682,9 @@ class _ResultSection extends StatelessWidget {
       error: (error, _) => Container(
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: _grey,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: Colors.redAccent, width: 2),
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: Colors.redAccent),
         ),
         child: Row(
           children: [
@@ -755,9 +718,9 @@ class _ResultSection extends StatelessWidget {
           return Container(
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
-              color: _grey,
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: _darkRed.withOpacity(0.15), width: 1),
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: const Color(0xFFE0E0E0)),
             ),
             child: Center(
               child: Column(
@@ -789,20 +752,9 @@ class _ResultSection extends StatelessWidget {
 
         return Container(
           decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [_grey, _cardBg],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: _darkRed.withOpacity(0.15), width: 2),
-            boxShadow: [
-              BoxShadow(
-                color: _darkRed.withOpacity(0.08),
-                blurRadius: 16,
-                offset: const Offset(0, 8),
-              ),
-            ],
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: const Color(0xFFE0E0E0)),
           ),
           padding: const EdgeInsets.all(24),
           child: Column(
@@ -814,7 +766,7 @@ class _ResultSection extends StatelessWidget {
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
                       color: _darkRed,
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(8),
                     ),
                     child: const Icon(Icons.check_circle, color: Colors.white, size: 24),
                   ),
@@ -837,7 +789,7 @@ class _ResultSection extends StatelessWidget {
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
                   color: _darkRed,
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(8),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -885,8 +837,8 @@ class _ResultSection extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: _grey,
-                  borderRadius: BorderRadius.circular(12),
+                  color: const Color(0xFFF7F7F7),
+                  borderRadius: BorderRadius.circular(8),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -930,8 +882,8 @@ class _ResultSection extends StatelessWidget {
                   width: double.infinity,
                   padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
-                    color: _grey,
-                    borderRadius: BorderRadius.circular(12),
+                    color: const Color(0xFFF7F7F7),
+                    borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
                     'لا توجد توقعات مرجعة.',
@@ -951,10 +903,10 @@ class _ResultSection extends StatelessWidget {
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                     decoration: BoxDecoration(
-                      color: _grey,
-                      borderRadius: BorderRadius.circular(12),
+                      color: const Color(0xFFF7F7F7),
+                      borderRadius: BorderRadius.circular(8),
                       border: Border.all(
-                        color: isSelected ? _darkRed : _grey,
+                        color: isSelected ? _darkRed : const Color(0xFFE0E0E0),
                         width: isSelected ? 2 : 1,
                       ),
                     ),
@@ -964,8 +916,9 @@ class _ResultSection extends StatelessWidget {
                           width: 28,
                           height: 28,
                           decoration: BoxDecoration(
-                            color: isSelected ? _darkRed : _grey,
+                            color: isSelected ? _darkRed : Colors.white,
                             shape: BoxShape.circle,
+                            border: Border.all(color: _darkRed.withOpacity(0.2)),
                           ),
                           child: Center(
                             child: Text(

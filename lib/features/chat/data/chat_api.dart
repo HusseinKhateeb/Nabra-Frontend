@@ -48,6 +48,10 @@ class ChatApi {
     return ChatModel.fromJson(res.data);
   }
 
+  Future<void> deleteChat(String chatId) async {
+    await dio.delete(ApiEndpoints.chatById(chatId));
+  }
+
   // ================= Send VOICE =================
   Future<void> sendVoiceMessage({
     required String chatId,
@@ -57,7 +61,7 @@ class ChatApi {
       ApiEndpoints.chatMessages(chatId),
       data: {
         "type": "VOICE",
-        "textContent": "🎤 رسالة صوتية",
+        "textContent": null,
         "mediaUrl": localPath, // مؤقت
         "voiceTranscript": null,
       },

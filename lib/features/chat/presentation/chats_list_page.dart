@@ -21,6 +21,49 @@ class _ChatsListPageState extends ConsumerState<ChatsListPage> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
 
+  Future<void> _confirmDeleteChat({
+    required BuildContext context,
+    required String chatId,
+    required String otherUserName,
+  }) async {
+    final bool? confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('حذف المحادثة؟', textDirection: TextDirection.rtl),
+          content: Text(
+            'هل تريد حذف محادثة $otherUserName؟',
+            textDirection: TextDirection.rtl,
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('إلغاء'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+              child: const Text('حذف', style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    final bool ok = await ref
+        .read(chatsListControllerProvider.notifier)
+        .deleteChat(chatId);
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(ok ? 'تم حذف المحادثة.' : 'تعذر حذف المحادثة.'),
+      ),
+    );
+  }
+
   @override
   void initState() {
     super.initState();
@@ -51,6 +94,13 @@ class _ChatsListPageState extends ConsumerState<ChatsListPage> {
         elevation: 0.5,
         automaticallyImplyLeading: false,
         titleSpacing: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.arrow_forward_ios),
+            color: const Color(0xFFE53935),
+            onPressed: () => context.go(AppRoutes.lipReading),
+          ),
+        ],
         title: Padding(
           padding: const EdgeInsets.only(right: 16),
           child: Row(
@@ -63,12 +113,6 @@ class _ChatsListPageState extends ConsumerState<ChatsListPage> {
                   color: Colors.black,
                   fontSize: 18,
                 ),
-              ),
-              SizedBox(width: 8),
-              Icon(
-                Icons.arrow_forward_ios,
-                color: Colors.red,
-                size: 18,
               ),
             ],
           ),
@@ -154,6 +198,11 @@ class _ChatsListPageState extends ConsumerState<ChatsListPage> {
                           lastMessage: chat.lastMessageText,
                           time: _formatTime(chat.lastMessageAt),
                           unread: chat.unreadCount,
+                          onLongPress: () => _confirmDeleteChat(
+                            context: context,
+                            chatId: chat.id,
+                            otherUserName: otherUser.displayName,
+                          ),
                           onTap: () async {
                             await Navigator.push(
                               context,

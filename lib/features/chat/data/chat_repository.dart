@@ -24,6 +24,11 @@ class ChatRepository {
   }) =>
       api.createChat(participantUserId);
 
+  Future<void> deleteChat({
+    required String chatId,
+  }) =>
+      api.deleteChat(chatId);
+
   // ================= Send VOICE (✅ FIXED) =================
   Future<void> sendVoiceMessage({
     required String chatId,

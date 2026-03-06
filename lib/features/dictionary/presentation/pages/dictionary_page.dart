@@ -40,7 +40,7 @@ class DictionaryPage extends ConsumerWidget {
           IconButton(
             icon: const Icon(Icons.arrow_forward_ios),
             color: const Color(0xFFE53935),
-            onPressed: () => context.pop(),
+            onPressed: () => context.go(AppRoutes.lipReading),
           ),
         ],
       ),

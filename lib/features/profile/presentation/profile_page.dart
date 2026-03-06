@@ -17,31 +17,32 @@ class ProfilePage extends ConsumerWidget {
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-        leading: const SizedBox(),
+        automaticallyImplyLeading: false,
+        titleSpacing: 0,
         actions: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Row(
-              children: [
-                const Text(
-                  'الملف الشخصي',
-                  style: TextStyle(
-                    color: Colors.black,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                  ),
-                  textDirection: TextDirection.rtl,
-                ),
-                const SizedBox(width: 8),
-                const Icon(
-                  Icons.arrow_forward_ios,
-                  color: Colors.red,
-                  size: 18,
-                ),
-              ],
-            ),
+          IconButton(
+            icon: const Icon(Icons.arrow_forward_ios),
+            color: const Color(0xFFE53935),
+            onPressed: () => context.go(AppRoutes.lipReading),
           ),
         ],
+        title: const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 16),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              Text(
+                'الملف الشخصي',
+                style: TextStyle(
+                  color: Colors.black,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+                textDirection: TextDirection.rtl,
+              ),
+            ],
+          ),
+        ),
       ),
       body: profileAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),

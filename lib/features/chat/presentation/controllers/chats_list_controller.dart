@@ -22,4 +22,24 @@ class ChatsListController extends StateNotifier<AsyncValue<List<ChatModel>>> {
       state = AsyncError(e, st);
     }
   }
+
+  Future<bool> deleteChat(String chatId) async {
+    final previous = state;
+    final currentChats = state.valueOrNull;
+
+    if (currentChats != null) {
+      state = AsyncData(
+        currentChats.where((chat) => chat.id != chatId).toList(growable: false),
+      );
+    }
+
+    try {
+      await repo.deleteChat(chatId: chatId);
+      return true;
+    } catch (_) {
+      state = previous;
+      await loadChats();
+      return false;
+    }
+  }
 }

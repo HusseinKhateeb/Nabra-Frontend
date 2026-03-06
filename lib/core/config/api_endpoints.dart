@@ -50,6 +50,8 @@ class ApiEndpoints {
 
   static String chatMessages(String chatId) => '$chats/$chatId/messages';
 
+  static String chatById(String chatId) => '$chats/$chatId';
+
   static String sessionStop(String sessionId) => '$sessions/$sessionId/stop';
 
   static String sessionById(String sessionId) => '$sessions/$sessionId';

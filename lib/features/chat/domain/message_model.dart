@@ -4,6 +4,7 @@ class MessageModel {
   final String type;
   final String? text;
   final String? mediaUrl;
+  final String? voiceTranscript;
   final DateTime sentAt;
   final String deliveryStatus;
 
@@ -13,6 +14,7 @@ class MessageModel {
     required this.type,
     this.text,
     this.mediaUrl,
+    this.voiceTranscript,
     required this.sentAt,
     required this.deliveryStatus,
   });
@@ -24,18 +26,20 @@ class MessageModel {
       type: json['type'],
       text: json['textContent'],
       mediaUrl: json['mediaUrl'],
+      voiceTranscript: json['voiceTranscript'],
       sentAt: DateTime.parse(json['sentAt']),
       deliveryStatus: json['deliveryStatus'],
     );
   }
 
-  MessageModel copyWith({String? deliveryStatus}) {
+  MessageModel copyWith({String? deliveryStatus, String? voiceTranscript}) {
     return MessageModel(
       id: id,
       senderId: senderId,
       type: type,
       text: text,
       mediaUrl: mediaUrl,
+      voiceTranscript: voiceTranscript ?? this.voiceTranscript,
       sentAt: sentAt,
       deliveryStatus: deliveryStatus ?? this.deliveryStatus,
     );

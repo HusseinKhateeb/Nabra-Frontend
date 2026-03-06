@@ -7,6 +7,7 @@ class ChatTile extends StatelessWidget {
   final String? avatarUrl;
   final String time;
   final VoidCallback onTap;
+  final VoidCallback? onLongPress;
 
   const ChatTile({
     super.key,
@@ -16,12 +17,14 @@ class ChatTile extends StatelessWidget {
     this.avatarUrl,
     required this.time,
     required this.onTap,
+    this.onLongPress,
   });
 
   @override
   Widget build(BuildContext context) {
     return ListTile(
       onTap: onTap,
+      onLongPress: onLongPress,
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       leading: CircleAvatar(
         radius: 24,

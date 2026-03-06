@@ -35,7 +35,13 @@ class FavoritesPage extends ConsumerWidget {
           IconButton(
             icon: const Icon(Icons.arrow_forward_ios),
             color: const Color(0xFFE53935),
-            onPressed: () => context.pop(),
+            onPressed: () {
+              if (context.canPop()) {
+                context.pop();
+              } else {
+                context.go(AppRoutes.dictionary);
+              }
+            },
           ),
         ],
       ),
@@ -49,15 +55,16 @@ class FavoritesPage extends ConsumerWidget {
               break;
             case 1:
               context.go(AppRoutes.sessions);
+              break;
             case 2:
-              context.go('/dictionary');
               context.go(AppRoutes.lipReading);
+              break;
             case 3:
-              context.go('/profile');
               context.go(AppRoutes.profile);
               break;
             case 4:
               context.go(AppRoutes.chats);
+              break;
           }
         },
       ),
