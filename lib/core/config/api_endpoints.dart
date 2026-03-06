@@ -52,6 +52,10 @@ class ApiEndpoints {
 
   static String sessionStop(String sessionId) => '$sessions/$sessionId/stop';
 
+  static String sessionById(String sessionId) => '$sessions/$sessionId';
+
+  static String userAvsrSessions(String userId) => '$_v1/$userId/sessions/';
+
   static String adminReportById(String reportId) => '$adminReports/$reportId';
 
   static String dictionaryCategoryWords(String categoryId) =>
