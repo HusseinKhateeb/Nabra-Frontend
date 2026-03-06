@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/utils/validators.dart';
 import 'auth_providers.dart';
+import '../../profile/presentation/providers/profile_providers.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
   const LoginPage({super.key});
@@ -37,6 +38,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         );
       }
       if (prev is AsyncLoading && next is AsyncData) {
+        // Invalidate user profile so it fetches new account data
+        ref.invalidate(userProfileProvider);
         context.go(AppRoutes.lipReading);
       }
     });
