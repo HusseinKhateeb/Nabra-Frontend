@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -19,9 +18,6 @@ class SessionsPage extends ConsumerStatefulWidget {
 }
 
 class _SessionsPageState extends ConsumerState<SessionsPage> {
-  final TextEditingController _minDurationController = TextEditingController();
-  final TextEditingController _maxDurationController = TextEditingController();
-
   Future<void> _confirmAndClearHistory(
     BuildContext context,
     SessionHistoryController controller,
@@ -30,18 +26,19 @@ class _SessionsPageState extends ConsumerState<SessionsPage> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('Clear all sessions?'),
+          title: const Text('مسح كل الجلسات؟', textDirection: TextDirection.rtl),
           content: const Text(
-            'This will delete all your session history permanently.',
+            'سيتم حذف كل سجل الجلسات بشكل نهائي.',
+            textDirection: TextDirection.rtl,
           ),
           actions: <Widget>[
             TextButton(
               onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Cancel'),
+              child: const Text('إلغاء'),
             ),
             ElevatedButton(
               onPressed: () => Navigator.of(context).pop(true),
-              child: const Text('Delete all'),
+              child: const Text('مسح الكل'),
             ),
           ],
         );
@@ -55,20 +52,13 @@ class _SessionsPageState extends ConsumerState<SessionsPage> {
         SnackBar(
           content: Text(
             ok
-                ? 'Session history cleared successfully.'
+                ? 'تم مسح سجل الجلسات بنجاح.'
                 : (ref.read(sessionHistoryControllerProvider).error ??
-                    'Failed to clear session history.'),
+                    'فشل مسح سجل الجلسات.'),
           ),
         ),
       );
     }
-  }
-
-  @override
-  void dispose() {
-    _minDurationController.dispose();
-    _maxDurationController.dispose();
-    super.dispose();
   }
 
   @override
@@ -77,84 +67,50 @@ class _SessionsPageState extends ConsumerState<SessionsPage> {
     final SessionHistoryController controller =
         ref.read(sessionHistoryControllerProvider.notifier);
 
-    _minDurationController.value = _minDurationController.value.copyWith(
-      text: state.filters.minDuration?.toString() ?? '',
-      selection: TextSelection.collapsed(
-        offset: (state.filters.minDuration?.toString() ?? '').length,
-      ),
-      composing: TextRange.empty,
-    );
-
-    _maxDurationController.value = _maxDurationController.value.copyWith(
-      text: state.filters.maxDuration?.toString() ?? '',
-      selection: TextSelection.collapsed(
-        offset: (state.filters.maxDuration?.toString() ?? '').length,
-      ),
-      composing: TextRange.empty,
-    );
-
-    return Scaffold(
-      backgroundColor: const Color(0xFFF7F7F7),
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        foregroundColor: const Color(0xFFE53935),
-        title: const Text('Session History'),
-        titleTextStyle: const TextStyle(
-          color: Colors.black,
-          fontSize: 20,
-          fontWeight: FontWeight.bold,
-        ),
-        elevation: 0.5,
-        actions: <Widget>[
-          IconButton(
-            tooltip: 'Clear all history',
-            icon: const Icon(Icons.delete_sweep_outlined),
-            onPressed: () async {
-              await _confirmAndClearHistory(context, controller);
-            },
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Scaffold(
+        backgroundColor: const Color(0xFFF7F7F7),
+        appBar: AppBar(
+          backgroundColor: Colors.white,
+          elevation: 0.5,
+          automaticallyImplyLeading: false,
+          titleSpacing: 0,
+          title: const Padding(
+            padding: EdgeInsets.only(right: 16),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: <Widget>[
+                Text(
+                  'سجل الجلسات',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black,
+                    fontSize: 18,
+                  ),
+                ),
+                SizedBox(width: 8),
+                Icon(
+                  Icons.arrow_forward_ios,
+                  color: Colors.red,
+                  size: 18,
+                ),
+              ],
+            ),
           ),
-        ],
-      ),
-      body: Column(
-        children: <Widget>[
-          if (state.loading) const LinearProgressIndicator(minHeight: 2),
-          _FilterPanel(
-            filters: state.filters,
-            minDurationController: _minDurationController,
-            maxDurationController: _maxDurationController,
-            onFromChanged: (value) => controller.updateFilters(<String, dynamic>{
-              'from': value == null
-                  ? null
-                  : DateTime(value.year, value.month, value.day),
-            }),
-            onToChanged: (value) => controller.updateFilters(<String, dynamic>{
-              'to': value == null
-                  ? null
-                  : DateTime(
-                      value.year,
-                      value.month,
-                      value.day,
-                      23,
-                      59,
-                      59,
-                      999,
-                    ),
-            }),
-            onApply: () => controller.updateFilters(
-              <String, dynamic>{
-                'minDuration': int.tryParse(_minDurationController.text.trim()),
-                'maxDuration': int.tryParse(_maxDurationController.text.trim()),
+          actions: <Widget>[
+            IconButton(
+              tooltip: 'مسح كل السجل',
+              icon: const Icon(Icons.delete_sweep_outlined, color: Colors.red),
+              onPressed: () async {
+                await _confirmAndClearHistory(context, controller);
               },
             ),
-            onClearHistory: () async {
-              await _confirmAndClearHistory(context, controller);
-            },
-            onResetFilters: () async {
-              _minDurationController.clear();
-              _maxDurationController.clear();
-              await controller.resetFilters();
-            },
-          ),
+          ],
+        ),
+        body: Column(
+        children: <Widget>[
+          if (state.loading) const LinearProgressIndicator(minHeight: 2),
           if (state.error != null)
             Container(
               width: double.infinity,
@@ -172,7 +128,7 @@ class _SessionsPageState extends ConsumerState<SessionsPage> {
                   ),
                   TextButton(
                     onPressed: controller.refresh,
-                    child: const Text('Retry'),
+                    child: const Text('إعادة المحاولة'),
                   ),
                 ],
               ),
@@ -196,11 +152,11 @@ class _SessionsPageState extends ConsumerState<SessionsPage> {
                               SnackBar(
                                 content: Text(
                                   ok
-                                      ? 'Session deleted successfully.'
+                                      ? 'تم حذف الجلسة بنجاح.'
                                       : (ref
                                               .read(sessionHistoryControllerProvider)
                                               .error ??
-                                          'Failed to delete session.'),
+                                          'فشل حذف الجلسة.'),
                                 ),
                               ),
                             );
@@ -212,200 +168,40 @@ class _SessionsPageState extends ConsumerState<SessionsPage> {
           ),
           _PaginationBar(
             page: state.page,
-            size: state.size,
             totalPages: state.totalPages,
             totalElements: state.totalElements,
             onPrev: state.page > 0 ? () => controller.setPage(state.page - 1) : null,
             onNext: (state.totalPages > 0 && state.page < state.totalPages - 1)
                 ? () => controller.setPage(state.page + 1)
                 : null,
-            onSizeChanged: (int newSize) => controller.setSize(newSize),
           ),
         ],
-      ),
-      bottomNavigationBar: SafeArea(
-        top: false,
-        child: MainBottomNavBar(
-          currentIndex: 1,
-          onTap: (int index) {
-            switch (index) {
-              case 0:
-                context.go(AppRoutes.dictionary);
-                break;
-              case 1:
-                break;
-              case 2:
-                context.go(AppRoutes.lipReading);
-                break;
-              case 3:
-                context.go(AppRoutes.profile);
-                break;
-              case 4:
-                context.go(AppRoutes.chats);
-                break;
-            }
-          },
+        ),
+        bottomNavigationBar: Directionality(
+          textDirection: TextDirection.ltr,
+          child: MainBottomNavBar(
+            currentIndex: 1,
+            onTap: (int index) {
+              switch (index) {
+                case 0:
+                  context.go(AppRoutes.dictionary);
+                  break;
+                case 1:
+                  break;
+                case 2:
+                  context.go(AppRoutes.lipReading);
+                  break;
+                case 3:
+                  context.go(AppRoutes.profile);
+                  break;
+                case 4:
+                  context.go(AppRoutes.chats);
+                  break;
+              }
+            },
+          ),
         ),
       ),
-    );
-  }
-}
-
-class _FilterPanel extends StatelessWidget {
-  const _FilterPanel({
-    required this.filters,
-    required this.minDurationController,
-    required this.maxDurationController,
-    required this.onFromChanged,
-    required this.onToChanged,
-    required this.onApply,
-    required this.onClearHistory,
-    required this.onResetFilters,
-  });
-
-  final SessionFilters filters;
-  final TextEditingController minDurationController;
-  final TextEditingController maxDurationController;
-  final ValueChanged<DateTime?> onFromChanged;
-  final ValueChanged<DateTime?> onToChanged;
-  final VoidCallback onApply;
-  final VoidCallback onClearHistory;
-  final VoidCallback onResetFilters;
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.all(12),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          children: <Widget>[
-            Row(
-              children: <Widget>[
-                Expanded(
-                  child: _DateFilterButton(
-                    label: 'From',
-                    value: filters.from,
-                    onChanged: onFromChanged,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: _DateFilterButton(
-                    label: 'To',
-                    value: filters.to,
-                    onChanged: onToChanged,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: <Widget>[
-                Expanded(
-                  child: Text(
-                    'Search by date range and duration only.',
-                    style: Theme.of(context).textTheme.bodyMedium,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: <Widget>[
-                Expanded(
-                  child: TextField(
-                    controller: minDurationController,
-                    keyboardType: TextInputType.number,
-                    inputFormatters: <TextInputFormatter>[FilteringTextInputFormatter.digitsOnly],
-                    decoration: const InputDecoration(
-                      labelText: 'Min duration (sec)',
-                      border: OutlineInputBorder(),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: TextField(
-                    controller: maxDurationController,
-                    keyboardType: TextInputType.number,
-                    inputFormatters: <TextInputFormatter>[FilteringTextInputFormatter.digitsOnly],
-                    decoration: const InputDecoration(
-                      labelText: 'Max duration (sec)',
-                      border: OutlineInputBorder(),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: <Widget>[
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: onResetFilters,
-                    child: const Text('Reset Filters'),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: onClearHistory,
-                    child: const Text('Clear History'),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: <Widget>[
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: onApply,
-                    style: ElevatedButton.styleFrom(backgroundColor: _darkRed),
-                    child: const Text(
-                      'Apply',
-                      style: TextStyle(color: Colors.white),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _DateFilterButton extends StatelessWidget {
-  const _DateFilterButton({
-    required this.label,
-    required this.value,
-    required this.onChanged,
-  });
-
-  final String label;
-  final DateTime? value;
-  final ValueChanged<DateTime?> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return OutlinedButton.icon(
-      onPressed: () async {
-        final DateTime initial = value ?? DateTime.now();
-        final DateTime? picked = await showDatePicker(
-          context: context,
-          firstDate: DateTime(2020),
-          lastDate: DateTime.now().add(const Duration(days: 365)),
-          initialDate: initial,
-        );
-        if (picked != null) {
-          onChanged(picked);
-        }
-      },
-      icon: const Icon(Icons.calendar_today, size: 16),
-      label: Text('$label: ${formatSessionDateTime(value)}'),
     );
   }
 }
@@ -447,12 +243,12 @@ class _SessionCard extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              'Final result: $finalResult',
+              'النتيجة النهائية: $finalResult',
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),
             Text(
-              'Audio result: $audioResult',
+              'نتيجة الصوت: $audioResult',
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),
@@ -462,7 +258,7 @@ class _SessionCard extends StatelessWidget {
               child: TextButton.icon(
                 onPressed: onDelete,
                 icon: const Icon(Icons.delete_outline),
-                label: const Text('Delete'),
+                label: const Text('حذف'),
               ),
             ),
           ],
@@ -511,21 +307,17 @@ class _StatusBadge extends StatelessWidget {
 class _PaginationBar extends StatelessWidget {
   const _PaginationBar({
     required this.page,
-    required this.size,
     required this.totalPages,
     required this.totalElements,
     required this.onPrev,
     required this.onNext,
-    required this.onSizeChanged,
   });
 
   final int page;
-  final int size;
   final int totalPages;
   final int totalElements;
   final VoidCallback? onPrev;
   final VoidCallback? onNext;
-  final ValueChanged<int> onSizeChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -536,22 +328,10 @@ class _PaginationBar extends StatelessWidget {
       ),
       child: Row(
         children: <Widget>[
-          Text('Total: $totalElements'),
+          Text('الإجمالي: $totalElements'),
           const Spacer(),
-          DropdownButton<int>(
-            value: size,
-            items: const <int>[10, 20, 50]
-                .map((int value) => DropdownMenuItem<int>(
-                      value: value,
-                      child: Text('$value/page'),
-                    ))
-                .toList(growable: false),
-            onChanged: (int? value) {
-              if (value != null) onSizeChanged(value);
-            },
-          ),
           IconButton(onPressed: onPrev, icon: const Icon(Icons.chevron_left)),
-          Text(totalPages == 0 ? 'Page 0 / 0' : 'Page ${page + 1} / $totalPages'),
+          Text(totalPages == 0 ? 'الصفحة 0 / 0' : 'الصفحة ${page + 1} / $totalPages'),
           IconButton(onPressed: onNext, icon: const Icon(Icons.chevron_right)),
         ],
       ),
@@ -570,7 +350,7 @@ class _EmptySessions extends StatelessWidget {
         children: const <Widget>[
           Icon(Icons.history, size: 56, color: Colors.grey),
           SizedBox(height: 8),
-          Text('No sessions found for the selected filters.'),
+          Text('لا توجد جلسات حتى الآن.'),
         ],
       ),
     );

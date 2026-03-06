@@ -29,8 +29,16 @@ String safeText(String? value) {
 }
 
 String statusLabel(SessionStatus? status) {
-  if (status == null) return '-';
-  return sessionStatusToApi(status);
+  switch (status) {
+    case SessionStatus.active:
+      return 'نشطة';
+    case SessionStatus.completed:
+      return 'مكتملة';
+    case SessionStatus.failed:
+      return 'فاشلة';
+    case null:
+      return '-';
+  }
 }
 
 String inputTypeLabel(SessionInputType? inputType) {

@@ -43,7 +43,6 @@ class _ChatsListPageState extends ConsumerState<ChatsListPage> {
     final tokenStorage = ref.watch(tokenStorageProvider);
 
     return Scaffold(
-      extendBody: true,
       backgroundColor: const Color(0xFFF7F7F7),
 
       // ================= AppBar =================
@@ -198,29 +197,26 @@ class _ChatsListPageState extends ConsumerState<ChatsListPage> {
       ),
 
       // ================= Bottom Nav =================
-      bottomNavigationBar: SafeArea(
-        top: false,
-        child: MainBottomNavBar(
-          currentIndex: 4,
-          onTap: (index) {
-            switch (index) {
-              case 0:
-                context.go(AppRoutes.dictionary);
-                break;
-              case 1:
-                context.go(AppRoutes.sessions);
-                break;
-              case 2:
-                context.go(AppRoutes.lipReading);
-                break;
-              case 3:
-                context.go(AppRoutes.profile);
-                break;
-              case 4:
-                break;
-            }
-          },
-        ),
+      bottomNavigationBar: MainBottomNavBar(
+        currentIndex: 4,
+        onTap: (index) {
+          switch (index) {
+            case 0:
+              context.go(AppRoutes.dictionary);
+              break;
+            case 1:
+              context.go(AppRoutes.sessions);
+              break;
+            case 2:
+              context.go(AppRoutes.lipReading);
+              break;
+            case 3:
+              context.go(AppRoutes.profile);
+              break;
+            case 4:
+              break;
+          }
+        },
       ),
     );
   }

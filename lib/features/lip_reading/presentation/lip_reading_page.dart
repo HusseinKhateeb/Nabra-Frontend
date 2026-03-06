@@ -45,7 +45,7 @@ class _LipReadingPageState extends ConsumerState<LipReadingPage> {
 
   bool _initializing = true;
   bool _isCapturing = false;
-  String _captureStatus = 'Ready';
+  String _captureStatus = 'جاهز';
 
   bool get _isSupportedPlatform {
     return kIsWeb ||
@@ -109,7 +109,7 @@ class _LipReadingPageState extends ConsumerState<LipReadingPage> {
       }
 
       if (selectedController == null) {
-        throw Exception('Unable to initialize camera with supported resolution.');
+        throw Exception('تعذر تهيئة الكاميرا بالدقة المدعومة.');
       }
 
       if (!mounted) return;
@@ -195,7 +195,7 @@ class _LipReadingPageState extends ConsumerState<LipReadingPage> {
     final CameraController? camera = _controller;
     if (camera == null || !camera.value.isInitialized) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Camera is not ready yet.')),
+        const SnackBar(content: Text('الكاميرا غير جاهزة حالياً.')),
       );
       return;
     }
@@ -203,7 +203,7 @@ class _LipReadingPageState extends ConsumerState<LipReadingPage> {
     ref.read(lipReadingControllerProvider.notifier).clearResult();
     setState(() {
       _isCapturing = true;
-      _captureStatus = 'Recording started...';
+      _captureStatus = 'بدأ التسجيل...';
     });
 
     late XFile recordedVideo;
@@ -214,12 +214,12 @@ class _LipReadingPageState extends ConsumerState<LipReadingPage> {
       if (kIsWeb) {
         setState(() {
           _isCapturing = false;
-          _captureStatus = 'AVSR requires both audio and video.';
+          _captureStatus = 'الميزة تحتاج صوتاً وفيديو معاً.';
         });
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('This AVSR flow currently requires audio + video and is not supported on web.'),
+            content: Text('هذه الميزة تتطلب صوتاً وفيديو وهي غير مدعومة حالياً على الويب.'),
           ),
         );
         return;
@@ -229,7 +229,7 @@ class _LipReadingPageState extends ConsumerState<LipReadingPage> {
         if (!hasPermission) {
           if (!mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Microphone permission is required.')),
+            const SnackBar(content: Text('يجب السماح باستخدام الميكروفون.')),
           );
           return;
         }
@@ -247,7 +247,7 @@ class _LipReadingPageState extends ConsumerState<LipReadingPage> {
           path: audioPath,
         );
         setState(() {
-          _captureStatus = 'Collecting raw $_capturedFrameTarget frames ($_videoCaptureDurationMs ms @ ${_recordingFps}fps, $_activeResolutionPreset)...';
+          _captureStatus = 'جارٍ تسجيل الفيديو والصوت...';
         });
 
         try {
@@ -264,7 +264,7 @@ class _LipReadingPageState extends ConsumerState<LipReadingPage> {
 
         if (mounted) {
           setState(() {
-            _captureStatus = 'Video captured (~$estimatedFramesSent frames). Continuing audio...';
+            _captureStatus = 'تم تسجيل الفيديو، جارٍ إكمال الصوت...';
           });
         }
 
@@ -278,7 +278,7 @@ class _LipReadingPageState extends ConsumerState<LipReadingPage> {
 
         if (mounted) {
           setState(() {
-            _captureStatus = 'Enhancing audio buffer...';
+            _captureStatus = 'جارٍ تحسين جودة الصوت...';
           });
         }
 
@@ -286,7 +286,7 @@ class _LipReadingPageState extends ConsumerState<LipReadingPage> {
         if (recordedAudio == null || recordedAudio.isEmpty) {
           setState(() {
             _isCapturing = false;
-            _captureStatus = 'Audio recording failed.';
+            _captureStatus = 'فشل تسجيل الصوت.';
           });
           return;
         }
@@ -294,7 +294,7 @@ class _LipReadingPageState extends ConsumerState<LipReadingPage> {
         if (recordedVideo.path.isEmpty || !(await File(recordedVideo.path).exists())) {
           setState(() {
             _isCapturing = false;
-            _captureStatus = 'Video recording failed.';
+            _captureStatus = 'فشل تسجيل الفيديو.';
           });
           return;
         }
@@ -306,7 +306,7 @@ class _LipReadingPageState extends ConsumerState<LipReadingPage> {
         );
         if (mounted) {
           setState(() {
-            _captureStatus = 'Uploading to backend...';
+            _captureStatus = 'جارٍ إرسال البيانات...';
           });
         }
         // Keep mp4 name for backend compatibility; try fast rename first.
@@ -340,7 +340,7 @@ class _LipReadingPageState extends ConsumerState<LipReadingPage> {
 
       if (!mounted) return;
       setState(() {
-        _captureStatus = 'Done';
+        _captureStatus = 'تم بنجاح';
       });
     } catch (e) {
       if (!kIsWeb) {
@@ -351,7 +351,7 @@ class _LipReadingPageState extends ConsumerState<LipReadingPage> {
       }
       if (!mounted) return;
       setState(() {
-        _captureStatus = 'Failed';
+        _captureStatus = 'فشلت العملية';
       });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(e.toString())),
@@ -368,7 +368,7 @@ class _LipReadingPageState extends ConsumerState<LipReadingPage> {
   void _clearCaptureAndResult() {
     ref.read(lipReadingControllerProvider.notifier).clearResult();
     setState(() {
-      _captureStatus = 'Ready';
+      _captureStatus = 'جاهز';
     });
   }
 
@@ -378,16 +378,40 @@ class _LipReadingPageState extends ConsumerState<LipReadingPage> {
     final bool uploading = state.isLoading || _isCapturing;
 
     if (!_isSupportedPlatform) {
-      return Scaffold(
-        backgroundColor: const Color(0xFFF7F7F7),
-        appBar: AppBar(
-          title: const Text('Lip Reading', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
-          backgroundColor: Colors.white,
-          foregroundColor: const Color(0xFFE53935),
-          elevation: 0.5,
-        ),
-        bottomNavigationBar: SafeArea(
-          top: false,
+      return Directionality(
+        textDirection: TextDirection.rtl,
+        child: Scaffold(
+          backgroundColor: const Color(0xFFF7F7F7),
+          appBar: AppBar(
+            backgroundColor: Colors.white,
+            elevation: 0.5,
+            automaticallyImplyLeading: false,
+            titleSpacing: 0,
+            title: const Padding(
+              padding: EdgeInsets.only(right: 16),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: <Widget>[
+                  Text(
+                    'قراءة الشفاه',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black,
+                      fontSize: 18,
+                    ),
+                  ),
+                  SizedBox(width: 8),
+                  Icon(
+                    Icons.arrow_forward_ios,
+                    color: Colors.red,
+                    size: 18,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        bottomNavigationBar: Directionality(
+          textDirection: TextDirection.ltr,
           child: MainBottomNavBar(
             currentIndex: 2,
             onTap: (index) {
@@ -414,23 +438,46 @@ class _LipReadingPageState extends ConsumerState<LipReadingPage> {
           child: Padding(
             padding: EdgeInsets.all(24),
             child: Text(
-              'This feature is available only on Android, iOS, and Web.',
+              'هذه الميزة تعمل فقط على أندرويد و iOS والويب.',
               textAlign: TextAlign.center,
               style: TextStyle(color: _darkRed, fontSize: 16),
             ),
           ),
         ),
-      );
+      ));
     }
 
-    return Scaffold(
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Scaffold(
       backgroundColor: const Color(0xFFF7F7F7),
       appBar: AppBar(
-        title: const Text('Lip Reading', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
         backgroundColor: Colors.white,
-        foregroundColor: const Color(0xFFE53935),
         elevation: 0.5,
-        centerTitle: true,
+        automaticallyImplyLeading: false,
+        titleSpacing: 0,
+        title: const Padding(
+          padding: EdgeInsets.only(right: 16),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: <Widget>[
+              Text(
+                'قراءة الشفاه',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black,
+                  fontSize: 18,
+                ),
+              ),
+              SizedBox(width: 8),
+              Icon(
+                Icons.arrow_forward_ios,
+                color: Colors.red,
+                size: 18,
+              ),
+            ],
+          ),
+        ),
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -575,7 +622,7 @@ class _LipReadingPageState extends ConsumerState<LipReadingPage> {
                       ),
                       const SizedBox(width: 12),
                       Text(
-                        uploading ? 'Processing...' : 'Start Recording',
+                        uploading ? 'جارٍ المعالجة...' : 'ابدأ التسجيل',
                         style: const TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
@@ -602,7 +649,7 @@ class _LipReadingPageState extends ConsumerState<LipReadingPage> {
                     ),
                   ),
                   icon: const Icon(Icons.refresh),
-                  label: const Text('Clear', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                  label: const Text('مسح', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
                 ),
               ),
               const SizedBox(height: 24),
@@ -613,8 +660,8 @@ class _LipReadingPageState extends ConsumerState<LipReadingPage> {
           ),
         ),
       ),
-      bottomNavigationBar: SafeArea(
-        top: false,
+      bottomNavigationBar: Directionality(
+        textDirection: TextDirection.ltr,
         child: MainBottomNavBar(
           currentIndex: 2,
           onTap: (index) {
@@ -637,7 +684,7 @@ class _LipReadingPageState extends ConsumerState<LipReadingPage> {
           },
         ),
       ),
-    );
+    ));
   }
 }
 
@@ -663,7 +710,7 @@ class _ResultSection extends StatelessWidget {
             ),
             SizedBox(height: 16),
             Text(
-              'Processing...',
+              'جارٍ المعالجة...',
               style: TextStyle(color: _darkRed, fontSize: 16, fontWeight: FontWeight.w500),
             ),
           ],
@@ -685,7 +732,7 @@ class _ResultSection extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
-                    'Error',
+                    'خطأ',
                     style: TextStyle(
                       color: Colors.redAccent,
                       fontSize: 16,
@@ -718,7 +765,7 @@ class _ResultSection extends StatelessWidget {
                   Icon(Icons.graphic_eq, size: 48, color: _darkRed.withOpacity(0.15)),
                   const SizedBox(height: 12),
                   Text(
-                    'No results yet',
+                    'لا توجد نتائج بعد',
                     style: TextStyle(color: _black.withOpacity(0.5), fontSize: 16),
                   ),
                 ],
@@ -773,7 +820,7 @@ class _ResultSection extends StatelessWidget {
                   ),
                   const SizedBox(width: 16),
                   const Text(
-                    'Recognition Result',
+                    'نتيجة التعرف',
                     style: TextStyle(
                       color: _darkRed,
                       fontSize: 18,
@@ -796,7 +843,7 @@ class _ResultSection extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'FINAL RESULT',
+                      'النتيجة النهائية',
                       style: TextStyle(
                         color: Colors.white.withOpacity(0.7),
                         fontSize: 12,
@@ -820,7 +867,7 @@ class _ResultSection extends StatelessWidget {
                         const Icon(Icons.verified, color: Colors.white, size: 18),
                         const SizedBox(width: 8),
                         Text(
-                          'Confidence: $finalConfidenceText',
+                          'نسبة الثقة: $finalConfidenceText',
                           style: TextStyle(
                             color: Colors.white.withOpacity(0.9),
                             fontSize: 14,
@@ -845,7 +892,7 @@ class _ResultSection extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'AUDIO RESULT',
+                      'نتيجة الصوت',
                       style: TextStyle(
                         color: _darkRed,
                         fontSize: 12,
@@ -855,7 +902,7 @@ class _ResultSection extends StatelessWidget {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      response.audioText.isNotEmpty ? response.audioText : 'No audio text returned',
+                      response.audioText.isNotEmpty ? response.audioText : 'لم يتم إرجاع نص صوتي',
                       style: TextStyle(
                         color: _black.withOpacity(0.9),
                         fontSize: 16,
@@ -869,7 +916,7 @@ class _ResultSection extends StatelessWidget {
               
               // Top 5 predictions
               Text(
-                'TOP 5 PREDICTIONS',
+                'أفضل 5 توقعات',
                 style: TextStyle(
                   color: _darkRed,
                   fontSize: 12,
@@ -887,7 +934,7 @@ class _ResultSection extends StatelessWidget {
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
-                    'No top predictions returned.',
+                    'لا توجد توقعات مرجعة.',
                     style: TextStyle(
                       color: _black.withOpacity(0.7),
                       fontSize: 14,
