@@ -25,17 +25,19 @@ class ChatApi {
 
     // Run inference (STT) on a saved voice message, returns transcript as String
     Future<String> inferVoiceMessage({required String voiceMessageId, required String chatId, String? accessToken}) async {
-      final formData = FormData();
-      formData.fields.add(MapEntry('chatId', chatId));
-      formData.fields.add(MapEntry('voiceMessageId', voiceMessageId));
-      final headers = <String, String>{};
+      final headers = <String, String>{
+        'Content-Type': 'application/json',
+      };
       if (accessToken != null && accessToken.isNotEmpty) {
         headers['Authorization'] = 'Bearer $accessToken';
       }
       final res = await dio.dio.post(
         ApiEndpoints.chatVoiceInfer,
-        data: formData,
-        options: Options(headers: headers.isNotEmpty ? headers : null),
+        data: {
+          'chatId': chatId,
+          'voiceMessageId': voiceMessageId,
+        },
+        options: Options(headers: headers),
       );
       if (res.statusCode == 200 && res.data != null) {
         return res.data.toString();
