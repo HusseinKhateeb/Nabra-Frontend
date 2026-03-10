@@ -1,4 +1,6 @@
-class ApiEndpoints {
+  class ApiEndpoints {
+    static String chatVoiceMessage(String chatId) => '$_v1/chats/$chatId/voice-message';
+    static const String chatVoiceInfer = '$_v1/chats/voice-infer';
   static const String _v1 = '/v1';
 
   // Auth

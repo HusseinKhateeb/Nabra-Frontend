@@ -1,11 +1,70 @@
-import '../../../core/config/api_endpoints.dart';
-import '../../../core/network/dio_client.dart';
-import '../domain/chat_model.dart';
-import '../domain/message_model.dart';
+
+  import 'package:dio/dio.dart';
+  import '../../../core/config/api_endpoints.dart';
+  import '../../../core/network/dio_client.dart';
+  import '../domain/chat_model.dart';
+  import '../domain/message_model.dart';
 
 class ChatApi {
+
+    // Upload and save a voice message, returns MessageModel
+    Future<MessageModel> uploadVoiceMessage({required String chatId, required String audioFilePath}) async {
+      final formData = FormData.fromMap({
+        'audioFile': await MultipartFile.fromFile(audioFilePath, filename: audioFilePath.split('/').last),
+      });
+      final res = await dio.dio.post(
+        ApiEndpoints.chatVoiceMessage(chatId),
+        data: formData,
+        options: Options(contentType: 'multipart/form-data'),
+      );
+      if (res.statusCode == 200 && res.data != null) {
+        return MessageModel.fromJson(res.data);
+      }
+      throw Exception('Failed to upload voice message');
+    }
+
+    // Run inference (STT) on a saved voice message, returns transcript as String
+    Future<String> inferVoiceMessage({required String voiceMessageId, required String chatId, String? accessToken}) async {
+      final formData = FormData();
+      formData.fields.add(MapEntry('chatId', chatId));
+      formData.fields.add(MapEntry('voiceMessageId', voiceMessageId));
+      final headers = <String, String>{};
+      if (accessToken != null && accessToken.isNotEmpty) {
+        headers['Authorization'] = 'Bearer $accessToken';
+      }
+      final res = await dio.dio.post(
+        ApiEndpoints.chatVoiceInfer,
+        data: formData,
+        options: Options(headers: headers.isNotEmpty ? headers : null),
+      );
+      if (res.statusCode == 200 && res.data != null) {
+        return res.data.toString();
+      }
+      throw Exception('Failed to infer voice message');
+    }
   final DioClient dio;
   ChatApi(this.dio);
+
+  // ================= Voice to Text (Lipreading) =================
+  Future<String> convertVoiceToText(String audioFilePath) async {
+    final formData = FormData.fromMap({
+      'audioFile': await MultipartFile.fromFile(audioFilePath, filename: audioFilePath.split('/').last),
+    });
+    final res = await dio.dio.post(
+      ApiEndpoints.lipReadingAvsrUploadAudio,
+      data: formData,
+      options: Options(contentType: 'multipart/form-data'),
+    );
+    // Assuming the response body is the transcript as plain text
+    if (res.statusCode == 200 && res.data is String) {
+      return res.data as String;
+    }
+    // If backend returns JSON, adjust accordingly
+    if (res.statusCode == 200 && res.data != null) {
+      return res.data.toString();
+    }
+    throw Exception('Failed to convert voice to text');
+  }
 
   // ================= Chats =================
   Future<List<ChatModel>> getChats() async {

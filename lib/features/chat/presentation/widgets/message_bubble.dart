@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 
+
 class MessageBubble extends StatelessWidget {
   final String text;
   final bool isMe;
-  final String? deliveryStatus; // SENT / READ
+  final String? deliveryStatus; // SENT / READ / FAILED
   final VoidCallback? onLongPress;
   final ValueChanged<Offset>? onLongPressAt;
   final bool isVoice;
+  final String? voiceTranscript;
 
   const MessageBubble({
     super.key,
@@ -16,6 +18,7 @@ class MessageBubble extends StatelessWidget {
     this.onLongPress,
     this.onLongPressAt,
     this.isVoice = false,
+    this.voiceTranscript,
   });
 
   @override
@@ -38,7 +41,7 @@ class MessageBubble extends StatelessWidget {
             crossAxisAlignment:
                 isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
             children: [
-              if (isVoice)
+              if (isVoice) ...[
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -68,14 +71,41 @@ class MessageBubble extends StatelessWidget {
                       ),
                     ),
                   ],
-                )
-              else
+                ),
+                if (voiceTranscript != null && voiceTranscript!.trim().isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    voiceTranscript!,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: Colors.black87,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ],
+              ] else
                 Text(text),
               if (isMe && deliveryStatus != null)
-                Text(
-                  deliveryStatus == 'READ' ? '✓✓' : '✓',
-                  style: const TextStyle(fontSize: 10),
-                ),
+                deliveryStatus == 'FAILED'
+                    ? Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.error, color: Colors.red, size: 14),
+                          const SizedBox(width: 4),
+                          Text(
+                            'فشل الإرسال',
+                            style: const TextStyle(
+                              fontSize: 10,
+                              color: Colors.red,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      )
+                    : Text(
+                        deliveryStatus == 'READ' ? '✓✓' : '✓',
+                        style: const TextStyle(fontSize: 10),
+                      ),
             ],
           ),
         ),

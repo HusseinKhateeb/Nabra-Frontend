@@ -214,35 +214,27 @@ class _ChatRoomPageState extends ConsumerState<ChatRoomPage> {
 
   Future<void> _showVoiceTranscript(MessageModel message) async {
     String transcript = (message.voiceTranscript ?? '').trim();
-
-    final String mediaUrl = (message.mediaUrl ?? '').trim();
-    final bool localMediaPath = mediaUrl.startsWith('/') || mediaUrl.startsWith('file:');
-
-    if (localMediaPath && transcript.isEmpty) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('الرسالة الصوتية غير مرفوعة كرابط عام، لذلك لا يمكن تحويلها تلقائياً.'),
-        ),
-      );
-      return;
-    }
-
     if (transcript.isEmpty) {
-      final repo = ref.read(chatRepositoryProvider);
-      final latestMessages = await repo.getMessages(widget.chatId);
-      final int idx = latestMessages.indexWhere((m) => m.id == message.id);
-
-      if (idx != -1) {
-        final updated = latestMessages[idx];
-        transcript = (updated.voiceTranscript ?? '').trim();
-
-        final int localIdx = messages.indexWhere((m) => m.id == updated.id);
+      try {
+        final repo = ref.read(chatRepositoryProvider);
+        transcript = (await repo.inferVoiceMessage(
+          voiceMessageId: message.id,
+          chatId: widget.chatId,
+          accessToken: widget.token,
+        )).trim();
+        // Update the message in the local list
+        final int localIdx = messages.indexWhere((m) => m.id == message.id);
         if (localIdx != -1 && mounted) {
           setState(() {
-            messages[localIdx] = updated;
+            messages[localIdx] = messages[localIdx].copyWith(voiceTranscript: transcript);
           });
         }
+      } catch (e) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('فشل تحويل الصوت إلى نص: $e')),
+        );
+        return;
       }
     }
 
@@ -256,27 +248,7 @@ class _ChatRoomPageState extends ConsumerState<ChatRoomPage> {
       );
       return;
     }
-
-    await showDialog<void>(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('النص المحول من الصوت', textDirection: TextDirection.rtl),
-          content: SingleChildScrollView(
-            child: Text(
-              transcript,
-              textDirection: TextDirection.rtl,
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('إغلاق'),
-            ),
-          ],
-        );
-      },
-    );
+    // No dialog needed, transcript will now show below the message bubble
   }
 
   Future<void> _startRecording() async {
@@ -288,11 +260,13 @@ class _ChatRoomPageState extends ConsumerState<ChatRoomPage> {
 
     final dir = await getTemporaryDirectory();
     _voicePath =
-        '${dir.path}/voice_${DateTime.now().millisecondsSinceEpoch}.m4a';
+        '${dir.path}/voice_${DateTime.now().millisecondsSinceEpoch}.opus';
 
+    // Use opus encoder for recording (cross-platform compressed audio)
+    final encoder = AudioEncoder.opus;
     await _recorder.start(
-      const RecordConfig(
-        encoder: AudioEncoder.aacLc,
+      RecordConfig(
+        encoder: encoder,
         bitRate: 128000,
         sampleRate: 44100,
       ),
@@ -327,6 +301,33 @@ class _ChatRoomPageState extends ConsumerState<ChatRoomPage> {
     }
   }
 
+  Future<void> _sendVoiceMessage(String path) async {
+    final repo = ref.read(chatRepositoryProvider);
+    try {
+      // 1. Upload and save the voice message, get the real message from backend
+      final savedMessage = await repo.uploadVoiceMessage(chatId: widget.chatId, audioFilePath: path);
+      setState(() => messages.add(savedMessage));
+
+      // 2. Immediately call inference to get the transcript
+      final transcript = await repo.inferVoiceMessage(
+        voiceMessageId: savedMessage.id,
+        chatId: widget.chatId,
+        audioFilePath: path,
+        accessToken: widget.token,
+      );
+      final idx = messages.indexWhere((m) => m.id == savedMessage.id);
+      if (idx != -1) {
+        setState(() {
+          messages[idx] = messages[idx].copyWith(voiceTranscript: transcript);
+        });
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('فشل إرسال أو تحويل الرسالة الصوتية: $e')),
+      );
+    }
+  }
+
   Future<void> _cancelRecording() async {
     final path = await _recorder.stop();
     _recordingTicker?.cancel();
@@ -354,30 +355,6 @@ class _ChatRoomPageState extends ConsumerState<ChatRoomPage> {
     return '$m:$s';
   }
 
-  Future<void> _sendVoiceMessage(String path) async {
-    final tempMessage = MessageModel(
-      id: 'local-${DateTime.now().millisecondsSinceEpoch}',
-      senderId: myUserId,
-      type: 'VOICE',
-      text: '🎤 رسالة صوتية',
-      mediaUrl: path, // مؤقت (local)
-      sentAt: DateTime.now(),
-      deliveryStatus: 'SENT',
-    );
-
-    setState(() => messages.add(tempMessage));
-
-    final repo = ref.read(chatRepositoryProvider);
-
-    // ✅ إرسال REST عادي (بدون multipart)
-    await repo.sendVoiceMessage(
-      chatId: widget.chatId,
-      localPath: path,
-    );
-
-    // ✅ بث عبر WS (اختياري لكن أفضل)
-    socket.sendMessage(widget.chatId, '🎤 رسالة صوتية');
-  }
 
   @override
   void dispose() {
@@ -474,7 +451,7 @@ class _ChatRoomPageState extends ConsumerState<ChatRoomPage> {
         ),
       );
     }
-
+    // Normal input (not recording)
     return Padding(
       padding: const EdgeInsets.all(8),
       child: Row(
@@ -518,12 +495,21 @@ class _ChatRoomPageState extends ConsumerState<ChatRoomPage> {
               setState(() => messages.add(tempMessage));
 
               final repo = ref.read(chatRepositoryProvider);
-              await repo.sendMessage(
-                chatId: widget.chatId,
-                text: text,
-              );
-
-              socket.sendMessage(widget.chatId, text);
+              try {
+                await repo.sendMessage(
+                  chatId: widget.chatId,
+                  text: text,
+                );
+                socket.sendMessage(widget.chatId, text);
+              } catch (e) {
+                // Update the message to show error
+                final idx = messages.indexWhere((m) => m.id == tempMessage.id);
+                if (idx != -1) {
+                  setState(() {
+                    messages[idx] = messages[idx].copyWith(deliveryStatus: 'FAILED');
+                  });
+                }
+              }
 
               controller.clear();
               socket.sendTyping(widget.chatId, false);
