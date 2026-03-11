@@ -1,4 +1,6 @@
 
+
+  import 'dart:io';
   import '../domain/chat_model.dart';
   import '../domain/message_model.dart';
   import 'chat_api.dart';
@@ -7,8 +9,16 @@
 class ChatRepository {
 
     // Upload and save a voice message, returns MessageModel
-    Future<MessageModel> uploadVoiceMessage({required String chatId, required String audioFilePath}) =>
-      api.uploadVoiceMessage(chatId: chatId, audioFilePath: audioFilePath);
+    Future<MessageModel> uploadVoiceMessage({
+      required String chatId,
+      required File audioFile,
+      required String jwtToken,
+    }) =>
+      api.uploadVoiceMessage(
+        chatId: chatId,
+        audioFile: audioFile,
+        jwtToken: jwtToken,
+      );
 
     // Run inference (STT) on a saved voice message, returns transcript as String
     Future<String> inferVoiceMessage({
@@ -26,8 +36,16 @@ class ChatRepository {
   ChatRepository(this.api);
 
   // ================= Voice to Text (Lipreading) =================
-  Future<String> convertVoiceToText(String audioFilePath) => api.convertVoiceToText(audioFilePath);
-
+  Future<String> convertVoiceToText({
+    required String filePath,
+    required String jwtToken,
+    required String sttEndpoint,
+  }) =>
+      api.convertVoiceToText(
+        filePath: filePath,
+        jwtToken: jwtToken,
+        sttEndpoint: sttEndpoint,
+      );
   // ================= Chats =================
   Future<List<ChatModel>> getChats() => api.getChats();
 

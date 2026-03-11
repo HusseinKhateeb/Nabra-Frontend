@@ -259,16 +259,17 @@ class _ChatRoomPageState extends ConsumerState<ChatRoomPage> {
     }
 
     final dir = await getTemporaryDirectory();
-    _voicePath =
-        '${dir.path}/voice_${DateTime.now().millisecondsSinceEpoch}.opus';
+      _voicePath =
+          '${dir.path}/voice_${DateTime.now().millisecondsSinceEpoch}.wav';
 
-    // Use opus encoder for recording (cross-platform compressed audio)
-    final encoder = AudioEncoder.opus;
+      // Use WAV encoder for recording
+      final encoder = AudioEncoder.wav;
     await _recorder.start(
       RecordConfig(
         encoder: encoder,
         bitRate: 128000,
-        sampleRate: 44100,
+        sampleRate: 16000,
+        numChannels: 1,
       ),
       path: _voicePath!,
     );
@@ -305,25 +306,16 @@ class _ChatRoomPageState extends ConsumerState<ChatRoomPage> {
     final repo = ref.read(chatRepositoryProvider);
     try {
       // 1. Upload and save the voice message, get the real message from backend
-      final savedMessage = await repo.uploadVoiceMessage(chatId: widget.chatId, audioFilePath: path);
-      setState(() => messages.add(savedMessage));
-
-      // 2. Immediately call inference to get the transcript
-      final transcript = await repo.inferVoiceMessage(
-        voiceMessageId: savedMessage.id,
+      final savedMessage = await repo.uploadVoiceMessage(
         chatId: widget.chatId,
-        audioFilePath: path,
-        accessToken: widget.token,
+        audioFile: File(path),
+        jwtToken: widget.token,
       );
-      final idx = messages.indexWhere((m) => m.id == savedMessage.id);
-      if (idx != -1) {
-        setState(() {
-          messages[idx] = messages[idx].copyWith(voiceTranscript: transcript);
-        });
-      }
+      setState(() => messages.add(savedMessage));
+      // No automatic inference. User must trigger transcript manually from the message menu.
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('فشل إرسال أو تحويل الرسالة الصوتية: $e')),
+        SnackBar(content: Text('فشل إرسال الرسالة الصوتية: $e')),
       );
     }
   }
@@ -398,6 +390,7 @@ class _ChatRoomPageState extends ConsumerState<ChatRoomPage> {
                   isMe: m.senderId == myUserId,
                   deliveryStatus: m.deliveryStatus,
                   isVoice: !isDeleted && m.type == 'VOICE',
+                  voiceTranscript: m.voiceTranscript,
                   onLongPressAt: (pos) => _showMessageActions(
                     message: m,
                     tapPosition: pos,
