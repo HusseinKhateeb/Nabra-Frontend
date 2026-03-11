@@ -7,6 +7,9 @@
 
 
 class ChatRepository {
+    // Permanently delete a message by ID
+    Future<void> deleteMessage({required String chatId, required String messageId, required String jwtToken}) =>
+      api.deleteMessage(chatId: chatId, messageId: messageId, jwtToken: jwtToken);
 
     // Upload and save a voice message, returns MessageModel
     Future<MessageModel> uploadVoiceMessage({

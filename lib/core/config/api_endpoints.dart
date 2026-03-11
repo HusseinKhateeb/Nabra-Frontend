@@ -1,4 +1,6 @@
   class ApiEndpoints {
+    static String chatMessagesByChatAndId(String chatId, String messageId) => '$chats/$chatId/messages/$messageId';
+    static String chatMessagesById(String messageId) => '$chats/messages/$messageId';
     static String chatVoiceMessage(String chatId) => '$_v1/chats/$chatId/voice-message';
     static const String chatVoiceInfer = '$_v1/chats/voice-infer';
   static const String _v1 = '/v1';

@@ -33,6 +33,7 @@ class _ChatRoomPageState extends ConsumerState<ChatRoomPage> {
   final socket = ChatSocketService();
   final controller = TextEditingController();
   final List<MessageModel> messages = [];
+  final ScrollController _scrollController = ScrollController();
 
   final _recorder = AudioRecorder();
   bool _isRecording = false;
@@ -60,6 +61,11 @@ class _ChatRoomPageState extends ConsumerState<ChatRoomPage> {
       setState(() {
         messages.addAll(oldMessages.reversed);
       });
+      // Scroll to bottom after messages load
+      await Future.delayed(const Duration(milliseconds: 100));
+      if (_scrollController.hasClients) {
+        _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
+      }
 
       // 2️⃣ SEEN
       final unreadIds = oldMessages
@@ -153,6 +159,7 @@ class _ChatRoomPageState extends ConsumerState<ChatRoomPage> {
     required Offset tapPosition,
   }) async {
     final bool isDeleted = _locallyDeletedMessageIds.contains(message.id);
+    final bool isMine = message.senderId == myUserId;
 
     final overlay = Overlay.of(context).context.findRenderObject() as RenderBox;
     final selected = await showMenu<String>(
@@ -171,7 +178,7 @@ class _ChatRoomPageState extends ConsumerState<ChatRoomPage> {
               title: Text('تحويل الصوت إلى نص'),
             ),
           ),
-        if (!isDeleted)
+        if (isMine && !isDeleted)
           const PopupMenuItem<String>(
             value: 'softDelete',
             child: ListTile(
@@ -180,7 +187,7 @@ class _ChatRoomPageState extends ConsumerState<ChatRoomPage> {
               title: Text('حذف الرسالة'),
             ),
           ),
-        if (isDeleted)
+        if (isMine && isDeleted)
           const PopupMenuItem<String>(
             value: 'hardRemove',
             child: ListTile(
@@ -199,15 +206,23 @@ class _ChatRoomPageState extends ConsumerState<ChatRoomPage> {
         await _showVoiceTranscript(message);
         break;
       case 'softDelete':
-        setState(() {
-          _locallyDeletedMessageIds.add(message.id);
-        });
-        break;
       case 'hardRemove':
-        setState(() {
-          messages.removeWhere((m) => m.id == message.id);
-          _locallyDeletedMessageIds.remove(message.id);
-        });
+        try {
+          final repo = ref.read(chatRepositoryProvider);
+          await repo.deleteMessage(
+            chatId: widget.chatId,
+            messageId: message.id,
+            jwtToken: widget.token,
+          );
+          setState(() {
+            messages.removeWhere((m) => m.id == message.id);
+            _locallyDeletedMessageIds.remove(message.id);
+          });
+        } catch (e) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('فشل حذف الرسالة نهائياً: $e')),
+          );
+        }
         break;
     }
   }
@@ -259,20 +274,19 @@ class _ChatRoomPageState extends ConsumerState<ChatRoomPage> {
     }
 
     final dir = await getTemporaryDirectory();
-      _voicePath =
-          '${dir.path}/voice_${DateTime.now().millisecondsSinceEpoch}.wav';
+    _voicePath = '${dir.path}/voice_${DateTime.now().millisecondsSinceEpoch}.wav';
 
-      // Use WAV encoder for recording
-      final encoder = AudioEncoder.wav;
+    // Match AVSR: WAV, mono, 16kHz, no bitRate
     await _recorder.start(
-      RecordConfig(
-        encoder: encoder,
-        bitRate: 128000,
+      const RecordConfig(
+        encoder: AudioEncoder.wav,
         sampleRate: 16000,
         numChannels: 1,
       ),
       path: _voicePath!,
     );
+
+    // Optionally: apply gain preprocessing after recording (not shown here, but can be added if needed)
 
     _recordingTicker?.cancel();
     setState(() {
@@ -378,6 +392,7 @@ class _ChatRoomPageState extends ConsumerState<ChatRoomPage> {
         children: [
           Expanded(
             child: ListView.builder(
+              controller: _scrollController,
               reverse: false,
               itemCount: messages.length,
               itemBuilder: (context, i) {
@@ -409,15 +424,16 @@ class _ChatRoomPageState extends ConsumerState<ChatRoomPage> {
   Widget _buildInput() {
     if (_isRecording) {
       return Padding(
-        padding: const EdgeInsets.fromLTRB(8, 6, 8, 10),
+        padding: const EdgeInsets.fromLTRB(8, 18, 8, 10), // Increased top padding
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14), // Increased vertical padding
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(28),
             border: Border.all(color: const Color(0xFFE0E0E0)),
           ),
           child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               IconButton(
                 tooltip: 'إلغاء التسجيل',
@@ -425,7 +441,7 @@ class _ChatRoomPageState extends ConsumerState<ChatRoomPage> {
                 onPressed: _cancelRecording,
               ),
               const Icon(Icons.mic, color: Colors.red),
-              const SizedBox(width: 8),
+              const SizedBox(width: 12),
               Expanded(
                 child: Text(
                   'جاري التسجيل... ${_formatRecordingTime(_recordingSeconds)}',
@@ -433,7 +449,7 @@ class _ChatRoomPageState extends ConsumerState<ChatRoomPage> {
                 ),
               ),
               const Icon(Icons.graphic_eq, color: Colors.grey),
-              const SizedBox(width: 8),
+              const SizedBox(width: 12),
               IconButton(
                 tooltip: 'إرسال التسجيل',
                 icon: const Icon(Icons.send, color: Colors.red),
@@ -445,9 +461,11 @@ class _ChatRoomPageState extends ConsumerState<ChatRoomPage> {
       );
     }
     // Normal input (not recording)
-    return Padding(
-      padding: const EdgeInsets.all(8),
+    return Container(
+      margin: const EdgeInsets.only(bottom: 18), // Move up from bottom edge
+      padding: const EdgeInsets.fromLTRB(8, 18, 8, 10),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           IconButton(
             icon: const Icon(Icons.mic, color: Colors.grey),

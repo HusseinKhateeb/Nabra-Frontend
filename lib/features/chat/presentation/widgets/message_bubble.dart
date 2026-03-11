@@ -31,10 +31,12 @@ class MessageBubble extends StatelessWidget {
           onLongPressAt?.call(details.globalPosition);
         },
         child: Container(
-          padding: const EdgeInsets.all(12),
-          margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+          padding: const EdgeInsets.all(14),
+          margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 10),
           decoration: BoxDecoration(
-            color: isMe ? const Color(0xFFFDECEC) : Colors.white,
+            color: isMe
+                ? const Color(0xFFE0E0E0) // light gray for sender
+                : const Color(0xFFF5F5F5), // softer gray for receiver
             borderRadius: BorderRadius.circular(16),
           ),
           child: Column(

@@ -7,6 +7,15 @@ import '../domain/chat_model.dart';
 import '../domain/message_model.dart';
 
 class ChatApi {
+    /// Permanently delete a message by ID (correct endpoint)
+    Future<void> deleteMessage({required String chatId, required String messageId, required String jwtToken}) async {
+      await dio.dio.delete(
+        '${ApiEndpoints.chatMessagesByChatAndId(chatId, messageId)}',
+        options: Options(
+          headers: {'Authorization': 'Bearer $jwtToken'},
+        ),
+      );
+    }
   /// Utility: Log file info before upload (for debugging)
   Future<void> logAudioFileInfo(String filePath) async {
     final file = File(filePath);
