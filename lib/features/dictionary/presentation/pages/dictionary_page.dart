@@ -51,6 +51,8 @@ class DictionaryPage extends ConsumerWidget {
         onTap: (index) {
           switch (index) {
             case 0:
+              // Always reload dictionary page
+              context.go(AppRoutes.dictionary + '?reload=${DateTime.now().millisecondsSinceEpoch}');
               break;
             case 1:
               context.go(AppRoutes.sessions);

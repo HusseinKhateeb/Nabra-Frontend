@@ -98,7 +98,10 @@ final GoRouter appRouter = GoRouter(
     ),
     GoRoute(
       path: AppRoutes.dictionary,
-      builder: (context, state) => const DictionaryPage(),
+      builder: (context, state) {
+        final reload = state.uri.queryParameters['reload'] ?? '';
+        return DictionaryPage(key: ValueKey(reload));
+      },
     ),
     GoRoute(
       path: AppRoutes.learning,
