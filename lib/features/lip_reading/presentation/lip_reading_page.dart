@@ -236,12 +236,14 @@ class _LipReadingPageState extends ConsumerState<LipReadingPage> {
 
         final Directory tempDir = await getTemporaryDirectory();
         final String audioPath =
-            '${tempDir.path}/audio-${DateTime.now().millisecondsSinceEpoch}.wav';
+            '${tempDir.path}/audio-${DateTime.now().millisecondsSinceEpoch}.m4a';
 
+        // Best compatibility: AAC, mono, 44.1kHz, 128kbps
         await _audioRecorder.start(
           const RecordConfig(
-            encoder: AudioEncoder.wav,
-            sampleRate: 16000,
+            encoder: AudioEncoder.aacLc,
+            bitRate: 128000,
+            sampleRate: 44100,
             numChannels: 1,
           ),
           path: audioPath,

@@ -276,7 +276,7 @@ class _ChatRoomPageState extends ConsumerState<ChatRoomPage> {
     final dir = await getTemporaryDirectory();
     _voicePath = '${dir.path}/voice_${DateTime.now().millisecondsSinceEpoch}.wav';
 
-    // Match AVSR: WAV, mono, 16kHz, no bitRate
+    // Backend compatibility: WAV, mono, 16kHz, 16-bit PCM
     await _recorder.start(
       const RecordConfig(
         encoder: AudioEncoder.wav,
