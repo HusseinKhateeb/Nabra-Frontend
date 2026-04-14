@@ -739,15 +739,14 @@ class _ResultSection extends StatelessWidget {
           );
         }
 
-        final topFivePredictions = response.lipTopPredictions.take(5).toList();
         final String finalResultWord = response.finalWord.trim().isNotEmpty
           ? response.finalWord.trim()
           : (response.matchedLipWord.trim().isNotEmpty
               ? response.matchedLipWord.trim()
-              : (topFivePredictions.isNotEmpty ? topFivePredictions.first.word : ''));
+              : (response.lipTopPredictions.isNotEmpty ? response.lipTopPredictions.first.word : ''));
         final double finalConfidence = response.lipConfidence > 0
           ? response.lipConfidence
-          : (topFivePredictions.isNotEmpty ? topFivePredictions.first.confidence : 0);
+          : (response.lipTopPredictions.isNotEmpty ? response.lipTopPredictions.first.confidence : 0);
         final String finalConfidenceText = finalConfidence <= 1
           ? '${(finalConfidence * 100).toStringAsFixed(1)}%'
           : '${finalConfidence.toStringAsFixed(1)}%';
@@ -868,102 +867,7 @@ class _ResultSection extends StatelessWidget {
               ),
               const SizedBox(height: 20),
               
-              // Top 5 predictions
-              Text(
-                'أفضل 5 توقعات',
-                style: TextStyle(
-                  color: _darkRed,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 1.5,
-                ),
-              ),
-              const SizedBox(height: 12),
-              if (topFivePredictions.isEmpty)
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF7F7F7),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    'لا توجد توقعات مرجعة.',
-                    style: TextStyle(
-                      color: _black.withOpacity(0.7),
-                      fontSize: 14,
-                    ),
-                  ),
-                ),
-              ...topFivePredictions.asMap().entries.map((entry) {
-                final index = entry.key;
-                final pred = entry.value;
-                final bool isSelected =
-                    pred.word.trim().toLowerCase() == finalResultWord.toLowerCase();
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF7F7F7),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                        color: isSelected ? _darkRed : const Color(0xFFE0E0E0),
-                        width: isSelected ? 2 : 1,
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 28,
-                          height: 28,
-                          decoration: BoxDecoration(
-                            color: isSelected ? _darkRed : Colors.white,
-                            shape: BoxShape.circle,
-                            border: Border.all(color: _darkRed.withOpacity(0.2)),
-                          ),
-                          child: Center(
-                            child: Text(
-                              '${index + 1}',
-                              style: TextStyle(
-                                color: isSelected ? Colors.white : _darkRed,
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            pred.word,
-                            style: TextStyle(
-                              color: _darkRed,
-                              fontSize: 16,
-                              fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                            ),
-                          ),
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: _darkRed.withOpacity(0.08),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            pred.confidence.toStringAsFixed(3),
-                            style: const TextStyle(
-                              color: _darkRed,
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              }),
+              // ...removed top predictions section, only winner word is shown...
             ],
           ),
         );
