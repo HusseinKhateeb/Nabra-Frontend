@@ -27,7 +27,7 @@ const int _capturedFrameTarget = 25;
 const int _targetBackendFrames = 25;
 const int _recordingFps = 25;
 const double _estimatedCaptureFps = 25.0;
-const double _audioBoostGain = 1.8;
+const double _audioBoostGain = 1.0;
 const int _wavHeaderSize = 44;
 const int _frameTolerance = 1;
 
@@ -56,6 +56,27 @@ class _LipReadingPageState extends ConsumerState<LipReadingPage> {
   bool get _isMobilePlatform {
     return defaultTargetPlatform == TargetPlatform.android ||
         defaultTargetPlatform == TargetPlatform.iOS;
+  }
+
+  Future<InputDevice?> _selectPreferredInputDevice() async {
+    try {
+      final devices = await _audioRecorder.listInputDevices();
+      if (devices.isEmpty) return null;
+
+      final preferred = devices.where((device) {
+        final label = device.label.toLowerCase();
+        return !label.contains('bluetooth') &&
+            !label.contains('airpods') &&
+            !label.contains('a2dp') &&
+            !label.contains('hands-free') &&
+            !label.contains('handsfree') &&
+            !label.contains('sco');
+      }).toList();
+
+      return preferred.isNotEmpty ? preferred.first : null;
+    } catch (_) {
+      return null;
+    }
   }
 
   @override
@@ -159,6 +180,10 @@ class _LipReadingPageState extends ConsumerState<LipReadingPage> {
     required Directory tempDir,
     double gain = _audioBoostGain,
   }) async {
+    if (gain == 1.0) {
+      return sourceFile;
+    }
+
     final Uint8List bytes = await sourceFile.readAsBytes();
     if (bytes.length <= _wavHeaderSize) {
       return sourceFile;
@@ -174,7 +199,9 @@ class _LipReadingPageState extends ConsumerState<LipReadingPage> {
     final Uint8List boostedBytes = Uint8List.fromList(bytes);
     final ByteData boostedData = ByteData.sublistView(boostedBytes);
 
-    for (int offset = _wavHeaderSize; offset + 1 < boostedBytes.length; offset += 2) {
+    for (int offset = _wavHeaderSize;
+        offset + 1 < boostedBytes.length;
+        offset += 2) {
       final int sample = sourceData.getInt16(offset, Endian.little);
       final int amplified = (sample * gain).round().clamp(-32768, 32767);
       boostedData.setInt16(offset, amplified, Endian.little);
@@ -219,7 +246,8 @@ class _LipReadingPageState extends ConsumerState<LipReadingPage> {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('هذه الميزة تتطلب صوتاً وفيديو وهي غير مدعومة حالياً على الويب.'),
+            content: Text(
+                'هذه الميزة تتطلب صوتاً وفيديو وهي غير مدعومة حالياً على الويب.'),
           ),
         );
         return;
@@ -236,15 +264,30 @@ class _LipReadingPageState extends ConsumerState<LipReadingPage> {
 
         final Directory tempDir = await getTemporaryDirectory();
         final String audioPath =
-            '${tempDir.path}/audio-${DateTime.now().millisecondsSinceEpoch}.m4a';
+            '${tempDir.path}/audio-${DateTime.now().millisecondsSinceEpoch}.wav';
+        final InputDevice? preferredInput = await _selectPreferredInputDevice();
 
-        // Best compatibility: AAC, mono, 44.1kHz, 128kbps
+        // Backend-friendly capture: WAV mono 16kHz PCM with minimal DSP.
         await _audioRecorder.start(
-          const RecordConfig(
-            encoder: AudioEncoder.aacLc,
-            bitRate: 128000,
-            sampleRate: 44100,
+          RecordConfig(
+            encoder: AudioEncoder.wav,
+            sampleRate: 16000,
             numChannels: 1,
+            autoGain: false,
+            echoCancel: false,
+            noiseSuppress: false,
+            device: preferredInput,
+            androidConfig: const AndroidRecordConfig(
+              audioSource: AndroidAudioSource.mic,
+              manageBluetooth: false,
+              audioManagerMode: AudioManagerMode.modeNormal,
+              speakerphone: false,
+            ),
+            iosConfig: const IosRecordConfig(
+              categoryOptions: [
+                IosAudioCategoryOption.defaultToSpeaker,
+              ],
+            ),
           ),
           path: audioPath,
         );
@@ -259,10 +302,13 @@ class _LipReadingPageState extends ConsumerState<LipReadingPage> {
         }
         await camera.startVideoRecording();
         final DateTime videoStartedAt = DateTime.now();
-        await Future<void>.delayed(const Duration(milliseconds: _videoCaptureDurationMs));
+        await Future<void>.delayed(
+            const Duration(milliseconds: _videoCaptureDurationMs));
         recordedVideo = await camera.stopVideoRecording();
-        final int actualVideoDurationMs = DateTime.now().difference(videoStartedAt).inMilliseconds;
-        final int estimatedFramesSent = ((actualVideoDurationMs / 1000) * _estimatedCaptureFps).round();
+        final int actualVideoDurationMs =
+            DateTime.now().difference(videoStartedAt).inMilliseconds;
+        final int estimatedFramesSent =
+            ((actualVideoDurationMs / 1000) * _estimatedCaptureFps).round();
 
         if (mounted) {
           setState(() {
@@ -270,7 +316,8 @@ class _LipReadingPageState extends ConsumerState<LipReadingPage> {
           });
         }
 
-        final int elapsedMs = DateTime.now().difference(startedAt).inMilliseconds;
+        final int elapsedMs =
+            DateTime.now().difference(startedAt).inMilliseconds;
         final int remainingAudioMs = _audioCaptureDurationMs - elapsedMs;
         if (remainingAudioMs > 0) {
           await Future<void>.delayed(Duration(milliseconds: remainingAudioMs));
@@ -293,7 +340,8 @@ class _LipReadingPageState extends ConsumerState<LipReadingPage> {
           return;
         }
         // Check video file
-        if (recordedVideo.path.isEmpty || !(await File(recordedVideo.path).exists())) {
+        if (recordedVideo.path.isEmpty ||
+            !(await File(recordedVideo.path).exists())) {
           setState(() {
             _isCapturing = false;
             _captureStatus = 'فشل تسجيل الفيديو.';
@@ -312,7 +360,8 @@ class _LipReadingPageState extends ConsumerState<LipReadingPage> {
           });
         }
         // Keep mp4 name for backend compatibility; try fast rename first.
-        final mp4VideoPath = '${tempDir.path}/video-${DateTime.now().millisecondsSinceEpoch}.mp4';
+        final mp4VideoPath =
+            '${tempDir.path}/video-${DateTime.now().millisecondsSinceEpoch}.mp4';
         File videoFile;
         try {
           videoFile = await File(recordedVideo.path).rename(mp4VideoPath);
@@ -325,19 +374,25 @@ class _LipReadingPageState extends ConsumerState<LipReadingPage> {
         final videoSize = videoExists ? await videoFile.length() : 0;
         final audioExt = boostedAudioFile.path.split('.').last;
         final videoExt = videoFile.path.split('.').last;
-        debugPrint('Audio file: path=${boostedAudioFile.path}, exists=$audioExists, size=${audioSize} bytes, ext=$audioExt, gain=$_audioBoostGain');
-        debugPrint('Video file: path=${videoFile.path}, exists=$videoExists, size=${videoSize} bytes, ext=$videoExt');
-        debugPrint('Capture profile -> video=${actualVideoDurationMs}ms, audioTarget=${_audioCaptureDurationMs}ms, capturedFramesTarget=$_capturedFrameTarget, backendFramesTarget=$_targetBackendFrames');
-        debugPrint('Estimated raw captured frames: ~$estimatedFramesSent (estFPS=$_estimatedCaptureFps)');
-        if ((estimatedFramesSent - _capturedFrameTarget).abs() > _frameTolerance) {
-          debugPrint('[WARNING] Estimated raw frames ($estimatedFramesSent) differ from target ($_capturedFrameTarget).');
+        debugPrint(
+            'Audio file: path=${boostedAudioFile.path}, exists=$audioExists, size=${audioSize} bytes, ext=$audioExt, gain=$_audioBoostGain');
+        debugPrint(
+            'Video file: path=${videoFile.path}, exists=$videoExists, size=${videoSize} bytes, ext=$videoExt');
+        debugPrint(
+            'Capture profile -> video=${actualVideoDurationMs}ms, audioTarget=${_audioCaptureDurationMs}ms, capturedFramesTarget=$_capturedFrameTarget, backendFramesTarget=$_targetBackendFrames');
+        debugPrint(
+            'Estimated raw captured frames: ~$estimatedFramesSent (estFPS=$_estimatedCaptureFps)');
+        if ((estimatedFramesSent - _capturedFrameTarget).abs() >
+            _frameTolerance) {
+          debugPrint(
+              '[WARNING] Estimated raw frames ($estimatedFramesSent) differ from target ($_capturedFrameTarget).');
         }
         await ref.read(lipReadingControllerProvider.notifier).runAvsrFusion(
-          audioFile: boostedAudioFile,
-          videoFile: videoFile,
-          frameCount: _targetBackendFrames,
-          fast: false,
-        );
+              audioFile: boostedAudioFile,
+              videoFile: videoFile,
+              frameCount: _targetBackendFrames,
+              fast: false,
+            );
       }
 
       if (!mounted) return;
@@ -376,11 +431,67 @@ class _LipReadingPageState extends ConsumerState<LipReadingPage> {
 
   @override
   Widget build(BuildContext context) {
-    final AsyncValue<AvsrFusionResponse?> state = ref.watch(lipReadingControllerProvider);
+    final AsyncValue<AvsrFusionResponse?> state =
+        ref.watch(lipReadingControllerProvider);
     final bool uploading = state.isLoading || _isCapturing;
 
     if (!_isSupportedPlatform) {
       return Directionality(
+          textDirection: TextDirection.rtl,
+          child: Scaffold(
+            backgroundColor: _pageBg,
+            appBar: AppBar(
+              backgroundColor: Colors.white,
+              elevation: 0.5,
+              automaticallyImplyLeading: false,
+              centerTitle: true,
+              title: const Text(
+                'قراءة الشفاه',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black,
+                  fontSize: 18,
+                ),
+              ),
+            ),
+            bottomNavigationBar: Directionality(
+              textDirection: TextDirection.ltr,
+              child: MainBottomNavBar(
+                currentIndex: 2,
+                onTap: (index) {
+                  switch (index) {
+                    case 0:
+                      context.go(AppRoutes.dictionary);
+                      break;
+                    case 1:
+                      context.go(AppRoutes.sessions);
+                      break;
+                    case 2:
+                      break;
+                    case 3:
+                      context.go(AppRoutes.profile);
+                      break;
+                    case 4:
+                      context.go(AppRoutes.chats);
+                      break;
+                  }
+                },
+              ),
+            ),
+            body: const Center(
+              child: Padding(
+                padding: EdgeInsets.all(24),
+                child: Text(
+                  'هذه الميزة تعمل فقط على أندرويد و iOS والويب.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: _darkRed, fontSize: 16),
+                ),
+              ),
+            ),
+          ));
+    }
+
+    return Directionality(
         textDirection: TextDirection.rtl,
         child: Scaffold(
           backgroundColor: _pageBg,
@@ -398,258 +509,216 @@ class _LipReadingPageState extends ConsumerState<LipReadingPage> {
               ),
             ),
           ),
-        bottomNavigationBar: Directionality(
-          textDirection: TextDirection.ltr,
-          child: MainBottomNavBar(
-            currentIndex: 2,
-            onTap: (index) {
-              switch (index) {
-                case 0:
-                  context.go(AppRoutes.dictionary);
-                  break;
-                case 1:
-                  context.go(AppRoutes.sessions);
-                  break;
-                case 2:
-                  break;
-                case 3:
-                  context.go(AppRoutes.profile);
-                  break;
-                case 4:
-                  context.go(AppRoutes.chats);
-                  break;
-              }
-            },
-          ),
-        ),
-        body: const Center(
-          child: Padding(
-            padding: EdgeInsets.all(24),
-            child: Text(
-              'هذه الميزة تعمل فقط على أندرويد و iOS والويب.',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: _darkRed, fontSize: 16),
-            ),
-          ),
-        ),
-      ));
-    }
-
-    return Directionality(
-      textDirection: TextDirection.rtl,
-      child: Scaffold(
-      backgroundColor: _pageBg,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0.5,
-        automaticallyImplyLeading: false,
-        centerTitle: true,
-        title: const Text(
-          'قراءة الشفاه',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            color: Colors.black,
-            fontSize: 18,
-          ),
-        ),
-      ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            children: [
-              // Camera preview card
-              Container(
-                color: Colors.white,
-                padding: const EdgeInsets.all(12),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: _initializing
-                      ? Container(
-                          color: _grey,
-                          child: const Center(
-                            child: CircularProgressIndicator(
-                              valueColor: AlwaysStoppedAnimation<Color>(_darkRed),
-                            ),
-                          ),
-                        )
-                      : (_controller == null
+          body: SafeArea(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                children: [
+                  // Camera preview card
+                  Container(
+                    color: Colors.white,
+                    padding: const EdgeInsets.all(12),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: _initializing
                           ? Container(
                               color: _grey,
                               child: const Center(
-                                child: Icon(Icons.camera_alt, color: _darkRed, size: 48),
-                              ),
-                            )
-                          : Center(
-                              child: AspectRatio(
-                                aspectRatio: 3 / 4,
-                                child: ClipRect(
-                                  child: Stack(
-                                    fit: StackFit.expand,
-                                    children: [
-                                      RepaintBoundary(
-                                        child: LayoutBuilder(
-                                          builder: (context, constraints) {
-                                            final previewSize = _controller!.value.previewSize;
-                                            if (previewSize == null) {
-                                              return CameraPreview(_controller!);
-                                            }
-                                            return FittedBox(
-                                              fit: BoxFit.cover,
-                                              child: SizedBox(
-                                                width: previewSize.height,
-                                                height: previewSize.width,
-                                                child: CameraPreview(_controller!),
-                                              ),
-                                            );
-                                          },
-                                        ),
-                                      ),
-                                      if (_isCapturing)
-                                        Container(
-                                          decoration: BoxDecoration(
-                                            border: Border.all(color: _darkRed, width: 3),
-                                          ),
-                                        ),
-                                    ],
-                                  ),
+                                child: CircularProgressIndicator(
+                                  valueColor:
+                                      AlwaysStoppedAnimation<Color>(_darkRed),
                                 ),
                               ),
-                            )),
-                ),
-              ),
-              const SizedBox(height: 24),
-              
-              // Status indicator
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 300),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                    color: uploading ? _darkRed : const Color(0xFFE0E0E0),
-                    width: 1,
+                            )
+                          : (_controller == null
+                              ? Container(
+                                  color: _grey,
+                                  child: const Center(
+                                    child: Icon(Icons.camera_alt,
+                                        color: _darkRed, size: 48),
+                                  ),
+                                )
+                              : Center(
+                                  child: AspectRatio(
+                                    aspectRatio: 3 / 4,
+                                    child: ClipRect(
+                                      child: Stack(
+                                        fit: StackFit.expand,
+                                        children: [
+                                          RepaintBoundary(
+                                            child: LayoutBuilder(
+                                              builder: (context, constraints) {
+                                                final previewSize = _controller!
+                                                    .value.previewSize;
+                                                if (previewSize == null) {
+                                                  return CameraPreview(
+                                                      _controller!);
+                                                }
+                                                return FittedBox(
+                                                  fit: BoxFit.cover,
+                                                  child: SizedBox(
+                                                    width: previewSize.height,
+                                                    height: previewSize.width,
+                                                    child: CameraPreview(
+                                                        _controller!),
+                                                  ),
+                                                );
+                                              },
+                                            ),
+                                          ),
+                                          if (_isCapturing)
+                                            Container(
+                                              decoration: BoxDecoration(
+                                                border: Border.all(
+                                                    color: _darkRed, width: 3),
+                                              ),
+                                            ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                )),
+                    ),
                   ),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    if (uploading)
-                      const Padding(
-                        padding: EdgeInsets.only(right: 12),
-                        child: SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(_lightRed),
+                  const SizedBox(height: 24),
+
+                  // Status indicator
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 300),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: uploading ? _darkRed : const Color(0xFFE0E0E0),
+                        width: 1,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        if (uploading)
+                          const Padding(
+                            padding: EdgeInsets.only(right: 12),
+                            child: SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor:
+                                    AlwaysStoppedAnimation<Color>(_lightRed),
+                              ),
+                            ),
+                          ),
+                        Flexible(
+                          child: Text(
+                            _captureStatus,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: uploading
+                                  ? _darkRed
+                                  : _black.withOpacity(0.7),
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                            ),
                           ),
                         ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Start button
+                  SizedBox(
+                    width: double.infinity,
+                    height: 60,
+                    child: ElevatedButton(
+                      onPressed: uploading ? null : _startCaptureAndSend,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _darkRed,
+                        disabledBackgroundColor: Colors.grey,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        elevation: 0,
                       ),
-                    Flexible(
-                      child: Text(
-                        _captureStatus,
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: uploading ? _darkRed : _black.withOpacity(0.7),
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            uploading ? Icons.hourglass_empty : Icons.mic,
+                            size: 28,
+                          ),
+                          const SizedBox(width: 12),
+                          Text(
+                            uploading ? 'جارٍ المعالجة...' : 'ابدأ التسجيل',
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Clear button
+                  SizedBox(
+                    width: double.infinity,
+                    height: 48,
+                    child: OutlinedButton.icon(
+                      onPressed: uploading ? null : _clearCaptureAndResult,
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: _darkRed,
+                        side: BorderSide(
+                            color: uploading ? _grey : _darkRed, width: 2),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
                         ),
                       ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 24),
-              
-              // Start button
-              SizedBox(
-                width: double.infinity,
-                height: 60,
-                child: ElevatedButton(
-                  onPressed: uploading ? null : _startCaptureAndSend,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: _darkRed,
-                    disabledBackgroundColor: Colors.grey,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    elevation: 0,
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        uploading ? Icons.hourglass_empty : Icons.mic,
-                        size: 28,
-                      ),
-                      const SizedBox(width: 12),
-                      Text(
-                        uploading ? 'جارٍ المعالجة...' : 'ابدأ التسجيل',
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 0.5,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
-              
-              // Clear button
-              SizedBox(
-                width: double.infinity,
-                height: 48,
-                child: OutlinedButton.icon(
-                  onPressed: uploading ? null : _clearCaptureAndResult,
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: _darkRed,
-                    side: BorderSide(color: uploading ? _grey : _darkRed, width: 2),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
+                      icon: const Icon(Icons.refresh),
+                      label: const Text('مسح',
+                          style: TextStyle(
+                              fontSize: 16, fontWeight: FontWeight.w600)),
                     ),
                   ),
-                  icon: const Icon(Icons.refresh),
-                  label: const Text('مسح', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-                ),
+                  const SizedBox(height: 24),
+
+                  // Result section
+                  _ResultSection(state: state),
+                ],
               ),
-              const SizedBox(height: 24),
-              
-              // Result section
-              _ResultSection(state: state),
-            ],
+            ),
           ),
-        ),
-      ),
-      bottomNavigationBar: Directionality(
-        textDirection: TextDirection.ltr,
-        child: MainBottomNavBar(
-          currentIndex: 2,
-          onTap: (index) {
-            switch (index) {
-              case 0:
-                context.go(AppRoutes.dictionary);
-                break;
-              case 1:
-                context.go(AppRoutes.sessions);
-                break;
-              case 2:
-                break;
-              case 3:
-                context.go(AppRoutes.profile);
-                break;
-              case 4:
-                context.go(AppRoutes.chats);
-                break;
-            }
-          },
-        ),
-      ),
-    ));
+          bottomNavigationBar: Directionality(
+            textDirection: TextDirection.ltr,
+            child: MainBottomNavBar(
+              currentIndex: 2,
+              onTap: (index) {
+                switch (index) {
+                  case 0:
+                    context.go(AppRoutes.dictionary);
+                    break;
+                  case 1:
+                    context.go(AppRoutes.sessions);
+                    break;
+                  case 2:
+                    break;
+                  case 3:
+                    context.go(AppRoutes.profile);
+                    break;
+                  case 4:
+                    context.go(AppRoutes.chats);
+                    break;
+                }
+              },
+            ),
+          ),
+        ));
   }
 }
 
@@ -676,7 +745,8 @@ class _ResultSection extends StatelessWidget {
             SizedBox(height: 16),
             Text(
               'جارٍ المعالجة...',
-              style: TextStyle(color: _darkRed, fontSize: 16, fontWeight: FontWeight.w500),
+              style: TextStyle(
+                  color: _darkRed, fontSize: 16, fontWeight: FontWeight.w500),
             ),
           ],
         ),
@@ -707,7 +777,8 @@ class _ResultSection extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(
                     error.toString(),
-                    style: TextStyle(color: _black.withOpacity(0.8), fontSize: 14),
+                    style:
+                        TextStyle(color: _black.withOpacity(0.8), fontSize: 14),
                   ),
                 ],
               ),
@@ -727,11 +798,13 @@ class _ResultSection extends StatelessWidget {
             child: Center(
               child: Column(
                 children: [
-                  Icon(Icons.graphic_eq, size: 48, color: _darkRed.withOpacity(0.15)),
+                  Icon(Icons.graphic_eq,
+                      size: 48, color: _darkRed.withOpacity(0.15)),
                   const SizedBox(height: 12),
                   Text(
                     'لا توجد نتائج بعد',
-                    style: TextStyle(color: _black.withOpacity(0.5), fontSize: 16),
+                    style:
+                        TextStyle(color: _black.withOpacity(0.5), fontSize: 16),
                   ),
                 ],
               ),
@@ -740,16 +813,20 @@ class _ResultSection extends StatelessWidget {
         }
 
         final String finalResultWord = response.finalWord.trim().isNotEmpty
-          ? response.finalWord.trim()
-          : (response.matchedLipWord.trim().isNotEmpty
-              ? response.matchedLipWord.trim()
-              : (response.lipTopPredictions.isNotEmpty ? response.lipTopPredictions.first.word : ''));
+            ? response.finalWord.trim()
+            : (response.matchedLipWord.trim().isNotEmpty
+                ? response.matchedLipWord.trim()
+                : (response.lipTopPredictions.isNotEmpty
+                    ? response.lipTopPredictions.first.word
+                    : ''));
         final double finalConfidence = response.lipConfidence > 0
-          ? response.lipConfidence
-          : (response.lipTopPredictions.isNotEmpty ? response.lipTopPredictions.first.confidence : 0);
+            ? response.lipConfidence
+            : (response.lipTopPredictions.isNotEmpty
+                ? response.lipTopPredictions.first.confidence
+                : 0);
         final String finalConfidenceText = finalConfidence <= 1
-          ? '${(finalConfidence * 100).toStringAsFixed(1)}%'
-          : '${finalConfidence.toStringAsFixed(1)}%';
+            ? '${(finalConfidence * 100).toStringAsFixed(1)}%'
+            : '${finalConfidence.toStringAsFixed(1)}%';
 
         return Container(
           decoration: BoxDecoration(
@@ -769,7 +846,8 @@ class _ResultSection extends StatelessWidget {
                       color: _darkRed,
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: const Icon(Icons.check_circle, color: Colors.white, size: 24),
+                    child: const Icon(Icons.check_circle,
+                        color: Colors.white, size: 24),
                   ),
                   const SizedBox(width: 16),
                   const Text(
@@ -783,7 +861,7 @@ class _ResultSection extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 24),
-              
+
               // Final result + confidence
               Container(
                 width: double.infinity,
@@ -817,7 +895,8 @@ class _ResultSection extends StatelessWidget {
                     const SizedBox(height: 10),
                     Row(
                       children: [
-                        const Icon(Icons.verified, color: Colors.white, size: 18),
+                        const Icon(Icons.verified,
+                            color: Colors.white, size: 18),
                         const SizedBox(width: 8),
                         Text(
                           'نسبة الثقة: $finalConfidenceText',
@@ -833,7 +912,7 @@ class _ResultSection extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 20),
-              
+
               // Audio result
               Container(
                 padding: const EdgeInsets.all(16),
@@ -855,7 +934,9 @@ class _ResultSection extends StatelessWidget {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      response.audioText.isNotEmpty ? response.audioText : 'لم يتم إرجاع نص صوتي',
+                      response.audioText.isNotEmpty
+                          ? response.audioText
+                          : 'لم يتم إرجاع نص صوتي',
                       style: TextStyle(
                         color: _black.withOpacity(0.9),
                         fontSize: 16,
@@ -866,7 +947,7 @@ class _ResultSection extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 20),
-              
+
               // ...removed top predictions section, only winner word is shown...
             ],
           ),

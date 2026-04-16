@@ -47,6 +47,27 @@ class _ChatRoomPageState extends ConsumerState<ChatRoomPage> {
   bool socketConnected = false;
   final Set<String> _locallyDeletedMessageIds = <String>{};
 
+  Future<InputDevice?> _selectPreferredInputDevice() async {
+    try {
+      final devices = await _recorder.listInputDevices();
+      if (devices.isEmpty) return null;
+
+      final preferred = devices.where((device) {
+        final label = device.label.toLowerCase();
+        return !label.contains('bluetooth') &&
+            !label.contains('airpods') &&
+            !label.contains('a2dp') &&
+            !label.contains('hands-free') &&
+            !label.contains('handsfree') &&
+            !label.contains('sco');
+      }).toList();
+
+      return preferred.isNotEmpty ? preferred.first : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -236,12 +257,14 @@ class _ChatRoomPageState extends ConsumerState<ChatRoomPage> {
           voiceMessageId: message.id,
           chatId: widget.chatId,
           accessToken: widget.token,
-        )).trim();
+        ))
+            .trim();
         // Update the message in the local list
         final int localIdx = messages.indexWhere((m) => m.id == message.id);
         if (localIdx != -1 && mounted) {
           setState(() {
-            messages[localIdx] = messages[localIdx].copyWith(voiceTranscript: transcript);
+            messages[localIdx] =
+                messages[localIdx].copyWith(voiceTranscript: transcript);
           });
         }
       } catch (e) {
@@ -258,7 +281,8 @@ class _ChatRoomPageState extends ConsumerState<ChatRoomPage> {
     if (transcript.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('لا يوجد نص محول حالياً. تأكد من إعداد خدمة STT في الخادم.'),
+          content:
+              Text('لا يوجد نص محول حالياً. تأكد من إعداد خدمة STT في الخادم.'),
         ),
       );
       return;
@@ -274,14 +298,31 @@ class _ChatRoomPageState extends ConsumerState<ChatRoomPage> {
     }
 
     final dir = await getTemporaryDirectory();
-    _voicePath = '${dir.path}/voice_${DateTime.now().millisecondsSinceEpoch}.wav';
+    _voicePath =
+        '${dir.path}/voice_${DateTime.now().millisecondsSinceEpoch}.wav';
+    final preferredInput = await _selectPreferredInputDevice();
 
     // Backend compatibility: WAV, mono, 16kHz, 16-bit PCM
     await _recorder.start(
-      const RecordConfig(
+      RecordConfig(
         encoder: AudioEncoder.wav,
         sampleRate: 16000,
         numChannels: 1,
+        autoGain: false,
+        echoCancel: false,
+        noiseSuppress: false,
+        device: preferredInput,
+        androidConfig: const AndroidRecordConfig(
+          audioSource: AndroidAudioSource.mic,
+          manageBluetooth: false,
+          audioManagerMode: AudioManagerMode.modeNormal,
+          speakerphone: false,
+        ),
+        iosConfig: const IosRecordConfig(
+          categoryOptions: [
+            IosAudioCategoryOption.defaultToSpeaker,
+          ],
+        ),
       ),
       path: _voicePath!,
     );
@@ -297,7 +338,8 @@ class _ChatRoomPageState extends ConsumerState<ChatRoomPage> {
     _recordingTicker = Timer.periodic(const Duration(seconds: 1), (_) {
       if (!mounted || _recordingStartedAt == null) return;
       setState(() {
-        _recordingSeconds = DateTime.now().difference(_recordingStartedAt!).inSeconds;
+        _recordingSeconds =
+            DateTime.now().difference(_recordingStartedAt!).inSeconds;
       });
     });
   }
@@ -361,7 +403,6 @@ class _ChatRoomPageState extends ConsumerState<ChatRoomPage> {
     return '$m:$s';
   }
 
-
   @override
   void dispose() {
     socket.disconnect();
@@ -424,9 +465,11 @@ class _ChatRoomPageState extends ConsumerState<ChatRoomPage> {
   Widget _buildInput() {
     if (_isRecording) {
       return Padding(
-        padding: const EdgeInsets.fromLTRB(8, 18, 8, 10), // Increased top padding
+        padding:
+            const EdgeInsets.fromLTRB(8, 18, 8, 10), // Increased top padding
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14), // Increased vertical padding
+          padding: const EdgeInsets.symmetric(
+              horizontal: 12, vertical: 14), // Increased vertical padding
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(28),
@@ -517,7 +560,8 @@ class _ChatRoomPageState extends ConsumerState<ChatRoomPage> {
                 final idx = messages.indexWhere((m) => m.id == tempMessage.id);
                 if (idx != -1) {
                   setState(() {
-                    messages[idx] = messages[idx].copyWith(deliveryStatus: 'FAILED');
+                    messages[idx] =
+                        messages[idx].copyWith(deliveryStatus: 'FAILED');
                   });
                 }
               }
