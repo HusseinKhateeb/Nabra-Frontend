@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import '../auth/auth_session_notifier.dart';
 import 'package:nabra_frontend/features/welcome/presentation/instructions_page.dart';
 import 'package:nabra_frontend/features/auth/presentation/forgot_password_page.dart';
 import 'package:nabra_frontend/features/auth/presentation/verify_reset_code_page.dart';
@@ -43,6 +44,7 @@ bool _isPublicRoute(String path) {
 
 final GoRouter appRouter = GoRouter(
   initialLocation: AppRoutes.splash,
+  refreshListenable: authSessionNotifier,
   redirect: (context, state) async {
     final String path = state.matchedLocation;
     if (_isPublicRoute(path)) return null;

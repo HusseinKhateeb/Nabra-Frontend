@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 
+import '../../../core/auth/auth_session_notifier.dart';
+
 class ChatPage extends StatefulWidget {
   const ChatPage({super.key});
 
@@ -26,6 +28,13 @@ class _ChatPageState extends State<ChatPage> {
       // Dio handles UTF-8 automatically
       setState(() {
         arabicText = response.data['rawOutput']?.toString();
+      });
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 401) {
+        authSessionNotifier.markLoggedOut();
+      }
+      setState(() {
+        error = 'Failed to load: $e';
       });
     } catch (e) {
       setState(() {

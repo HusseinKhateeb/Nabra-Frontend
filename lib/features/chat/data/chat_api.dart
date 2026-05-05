@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:convert';
 import 'package:dio/dio.dart';
+import '../../../core/auth/auth_session_notifier.dart';
 import '../../../core/config/api_endpoints.dart';
 import '../../../core/network/dio_client.dart';
 import '../domain/chat_model.dart';
@@ -32,23 +33,30 @@ class ChatApi {
 
   /// Sample: Standalone upload function matching checklist (for demonstration)
   Future<void> uploadAudioFileSample(String filePath, String jwtToken) async {
-    final dio = Dio();
-    final file = await MultipartFile.fromFile(filePath,
-        filename: filePath.split('/').last);
-    final formData = FormData.fromMap({
-      'audioFile': file,
-    });
-    final response = await dio.post(
-      'http://your-backend-url/api/v1/lipreading/avsr/upload-audio',
-      data: formData,
-      options: Options(
-        headers: {
-          'Authorization': 'Bearer $jwtToken',
-          // Do NOT set Content-Type manually; Dio sets it for FormData.
-        },
-      ),
-    );
-    print(response.data);
+    try {
+      final dio = Dio();
+      final file = await MultipartFile.fromFile(filePath,
+          filename: filePath.split('/').last);
+      final formData = FormData.fromMap({
+        'audioFile': file,
+      });
+      final response = await dio.post(
+        'http://your-backend-url/api/v1/lipreading/avsr/upload-audio',
+        data: formData,
+        options: Options(
+          headers: {
+            'Authorization': 'Bearer $jwtToken',
+            // Do NOT set Content-Type manually; Dio sets it for FormData.
+          },
+        ),
+      );
+      print(response.data);
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 401) {
+        authSessionNotifier.markLoggedOut();
+      }
+      rethrow;
+    }
   }
 
   /// Uploads a voice message (audio file) to the chat backend and returns the message model.
@@ -160,46 +168,53 @@ class ChatApi {
     required String jwtToken,
     required String sttEndpoint,
   }) async {
-    final dio = Dio();
-    final file = await MultipartFile.fromFile(filePath,
-        filename: filePath.split('/').last);
+    try {
+      final dio = Dio();
+      final file = await MultipartFile.fromFile(filePath,
+          filename: filePath.split('/').last);
 
-    final formData = FormData.fromMap({
-      'audioFile': file, // field name must match backend
-    });
+      final formData = FormData.fromMap({
+        'audioFile': file, // field name must match backend
+      });
 
-    final response = await dio.post(
-      sttEndpoint,
-      data: formData,
-      options: Options(
-        headers: {
-          'Authorization': 'Bearer $jwtToken',
-          // Do NOT set Content-Type manually for multipart/form-data!
-        },
-      ),
-    );
+      final response = await dio.post(
+        sttEndpoint,
+        data: formData,
+        options: Options(
+          headers: {
+            'Authorization': 'Bearer $jwtToken',
+            // Do NOT set Content-Type manually for multipart/form-data!
+          },
+        ),
+      );
 
-    // Robust UTF-8 decoding for Arabic
-    dynamic decodedData = response.data;
-    if (response.data is List<int>) {
-      decodedData = jsonDecode(utf8.decode(response.data));
-    } else if (response.data is String) {
-      try {
-        decodedData = jsonDecode(response.data);
-      } catch (_) {
-        decodedData = response.data;
+      // Robust UTF-8 decoding for Arabic
+      dynamic decodedData = response.data;
+      if (response.data is List<int>) {
+        decodedData = jsonDecode(utf8.decode(response.data));
+      } else if (response.data is String) {
+        try {
+          decodedData = jsonDecode(response.data);
+        } catch (_) {
+          decodedData = response.data;
+        }
       }
-    }
-    if (response.statusCode == 200 && decodedData != null) {
-      if (decodedData is Map && decodedData['result'] != null) {
-        return decodedData['result']?.toString() ?? '';
-      } else if (decodedData is String) {
-        return decodedData;
+      if (response.statusCode == 200 && decodedData != null) {
+        if (decodedData is Map && decodedData['result'] != null) {
+          return decodedData['result']?.toString() ?? '';
+        } else if (decodedData is String) {
+          return decodedData;
+        } else {
+          throw Exception('STT failed: Invalid response format');
+        }
       } else {
-        throw Exception('STT failed: Invalid response format');
+        throw Exception('STT failed: ${response.statusCode}');
       }
-    } else {
-      throw Exception('STT failed: ${response.statusCode}');
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 401) {
+        authSessionNotifier.markLoggedOut();
+      }
+      rethrow;
     }
   }
 

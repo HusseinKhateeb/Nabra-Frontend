@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
+import '../auth/auth_session_notifier.dart';
 import 'token_storage.dart';
 
 class AuthInterceptor extends Interceptor {
@@ -59,6 +60,7 @@ class AuthInterceptor extends Interceptor {
     // because backend endpoint/business errors can surface as 403 on /error.
     if (protectedEndpoint && status == 401) {
       await _tokenStorage.clear();
+      authSessionNotifier.markLoggedOut();
       if (kDebugMode) {
         debugPrint('[Auth] Cleared local tokens after $status on $path');
       }
