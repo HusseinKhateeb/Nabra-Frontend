@@ -48,6 +48,7 @@ class LipReadingApi {
         ),
       );
 
+      await _deleteRejectedSessionIfNeeded(res.data);
       return _parseFusionResponse(res.data);
     } on DioException catch (error) {
       final int? statusCode = error.response?.statusCode;
@@ -158,7 +159,9 @@ class LipReadingApi {
         return AvsrFusionResponse.fromRawOutput(rawOutput);
       }
 
-      return AvsrFusionResponse.fromJson(body);
+      final Map<String, dynamic> normalizedPayload =
+          _unwrapResultPayload(body);
+      return AvsrFusionResponse.fromJson(normalizedPayload);
     }
 
     if (body is String) {
@@ -177,6 +180,31 @@ class LipReadingApi {
     }
 
     return AvsrFusionResponse.fromRawOutput(body?.toString() ?? '');
+  }
+
+  Future<void> _deleteRejectedSessionIfNeeded(dynamic body) async {
+    final Map<String, dynamic>? payload = _extractPayloadMap(body);
+    final String message = _extractNoAudioMessage(body, payload);
+    if (message.isEmpty) return;
+
+    final String? sessionId = _extractSessionId(payload ?? <String, dynamic>{});
+    if (sessionId != null && sessionId.isNotEmpty) {
+      try {
+        await _client.dio.delete(ApiEndpoints.sessionById(sessionId));
+      } catch (_) {
+        // Best-effort cleanup. The user-facing rejection message still wins.
+      }
+    }
+
+    throw Exception(message);
+  }
+
+  Map<String, dynamic> _unwrapResultPayload(Map<String, dynamic> payload) {
+    final dynamic result = payload['result'];
+    if (result is Map<String, dynamic>) {
+      return result;
+    }
+    return payload;
   }
 
   Map<String, dynamic>? _tryDecodeJsonObjectFromText(String text) {
@@ -208,10 +236,92 @@ class LipReadingApi {
     return null;
   }
 
+  Map<String, dynamic>? _extractPayloadMap(dynamic body) {
+    if (body is Map<String, dynamic>) {
+      return body;
+    }
+
+    if (body is String) {
+      return _tryDecodeJsonObjectFromText(body.trim());
+    }
+
+    return null;
+  }
+
+  String _extractNoAudioMessage(dynamic body, Map<String, dynamic>? payload) {
+    final List<String> candidates = <String>[];
+
+    if (body is String) {
+      candidates.add(body);
+    }
+
+    if (payload != null) {
+      final Map<String, dynamic> normalizedPayload =
+          _unwrapResultPayload(payload);
+
+      final dynamic rawOutput = payload['rawOutput'] ?? payload['raw_output'];
+      final dynamic audioText = payload['audioText'] ?? payload['audio_text'];
+      final dynamic errorText = payload['error'] ?? payload['message'];
+      final dynamic nestedAudioText =
+          normalizedPayload['audioText'] ?? normalizedPayload['audio_text'];
+      final dynamic nestedErrorText =
+          normalizedPayload['error'] ?? normalizedPayload['message'];
+
+      if (rawOutput is String) candidates.add(rawOutput);
+      if (audioText is String) candidates.add(audioText);
+      if (errorText is String) candidates.add(errorText);
+      if (nestedAudioText is String) candidates.add(nestedAudioText);
+      if (nestedErrorText is String) candidates.add(nestedErrorText);
+    }
+
+    for (final String candidate in candidates) {
+      final String friendly = _toUserFriendlyMessage(candidate);
+      if (friendly != candidate) {
+        return friendly;
+      }
+    }
+
+    return '';
+  }
+
+  String? _extractSessionId(Map<String, dynamic> payload) {
+    final List<String> keys = <String>[
+      'sessionId',
+      'session_id',
+      'id',
+      'session',
+    ];
+
+    for (final String key in keys) {
+      final dynamic value = payload[key];
+      if (value is String && value.trim().isNotEmpty) {
+        return value.trim();
+      }
+    }
+
+    final dynamic nestedSession = payload['session'];
+    if (nestedSession is Map<String, dynamic>) {
+      final String? nestedId = _extractSessionId(nestedSession);
+      if (nestedId != null && nestedId.isNotEmpty) {
+        return nestedId;
+      }
+    }
+
+    return null;
+  }
+
   String _toUserFriendlyMessage(String message) {
     final String normalized = message.toLowerCase();
     if (normalized.contains('no face detected in video frames')) {
       return 'No face was detected. Please keep your full face visible, look at the camera directly, and record in good lighting.';
+    }
+    if (normalized.contains('لم يتم ارجاع الصوت') ||
+        normalized.contains('لم يتم إرجاع الصوت') ||
+        normalized.contains('اشتركوا في القناة') ||
+        normalized.contains('no audio returned') ||
+        normalized.contains('audio was not returned') ||
+        normalized.contains('audio not returned')) {
+      return 'الصوت غير واضح بسبب الضوضاء. ابتعد عن المكان المزدحم أو الأصوات العالية ثم أعد التسجيل. سيتم تجاهل النتيجة الحالية.';
     }
     return message;
   }

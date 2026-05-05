@@ -6,14 +6,24 @@ import '../../../core/providers.dart';
 import '../data/lip_reading_api.dart';
 import '../data/lip_reading_repository.dart';
 import '../domain/avsr_models.dart';
+import '../../sessions/data/session_api.dart';
+import '../../sessions/data/session_repository.dart';
 
 final lipReadingApiProvider = Provider<LipReadingApi>((ref) {
   return LipReadingApi(ref.watch(dioClientProvider));
 });
 
+final _lipReadingSessionRepositoryProvider = Provider<SessionRepository>((ref) {
+  return SessionRepository(
+    api: SessionApi(ref.watch(dioClientProvider).dio),
+    tokenStorage: ref.watch(tokenStorageProvider),
+  );
+});
+
 final lipReadingRepositoryProvider = Provider<LipReadingRepository>((ref) {
   return LipReadingRepository(
     api: ref.watch(lipReadingApiProvider),
+    sessionRepository: ref.watch(_lipReadingSessionRepositoryProvider),
   );
 });
 

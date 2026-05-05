@@ -98,8 +98,6 @@ class _LipReadingPageState extends ConsumerState<LipReadingPage> {
       );
 
       final List<ResolutionPreset> preferredPresets = <ResolutionPreset>[
-        // ResolutionPreset.veryHigh,
-        ResolutionPreset.high,
         ResolutionPreset.medium,
       ];
 
@@ -446,7 +444,7 @@ class _LipReadingPageState extends ConsumerState<LipReadingPage> {
               automaticallyImplyLeading: false,
               centerTitle: true,
               title: const Text(
-                'قراءة الشفاه',
+                'الترجمة الفورية',
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
                   color: Colors.black,
@@ -501,7 +499,7 @@ class _LipReadingPageState extends ConsumerState<LipReadingPage> {
             automaticallyImplyLeading: false,
             centerTitle: true,
             title: const Text(
-              'قراءة الشفاه',
+              'الترجمة الفورية',
               style: TextStyle(
                 fontWeight: FontWeight.bold,
                 color: Colors.black,

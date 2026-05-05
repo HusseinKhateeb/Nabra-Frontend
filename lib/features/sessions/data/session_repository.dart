@@ -103,6 +103,46 @@ class SessionRepository {
     );
   }
 
+  Future<bool> deleteMostRecentCurrentUserSession({
+    CancelToken? cancelToken,
+    DateTime? createdAfter,
+    int maxAttempts = 5,
+    Duration retryDelay = const Duration(milliseconds: 350),
+  }) async {
+    final DateTime? threshold = createdAfter?.toUtc();
+
+    for (int attempt = 0; attempt < maxAttempts; attempt++) {
+      final PageResponse<SessionResponse> page =
+          await getCurrentUserAvsrSessions(
+        params: const PageQueryParams(page: 0, size: 1, sort: 'startedAt,desc'),
+        cancelToken: cancelToken,
+      );
+
+      if (page.content.isNotEmpty) {
+        final SessionResponse newest = page.content.first;
+        final DateTime? startedAt = newest.startedAt?.toUtc();
+        final bool isTargetSession = threshold == null ||
+            (startedAt != null &&
+                (startedAt.isAfter(threshold) ||
+                    startedAt.isAtSameMomentAs(threshold)));
+
+        if (isTargetSession) {
+          await deleteSession(
+            sessionId: newest.id,
+            cancelToken: cancelToken,
+          );
+          return true;
+        }
+      }
+
+      if (attempt < maxAttempts - 1) {
+        await Future<void>.delayed(retryDelay);
+      }
+    }
+
+    return false;
+  }
+
   Future<SessionResponse> getSessionById({
     required String sessionId,
     CancelToken? cancelToken,
