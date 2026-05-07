@@ -512,6 +512,39 @@ class _LipReadingPageState extends ConsumerState<LipReadingPage> {
               padding: const EdgeInsets.all(20),
               child: Column(
                 children: [
+                  // Short note above camera
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: _lightRed,
+                        width: 1.5,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.info_outline,
+                            color: _darkRed, size: 20),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            'تأكد من أن وجهك داخل الإطار و ابتعد عن الأصوات المزعجة',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: _black.withOpacity(0.8),
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+
                   // Camera preview card
                   Container(
                     color: Colors.white,
@@ -774,7 +807,7 @@ class _ResultSection extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    error.toString(),
+                    _friendlyErrorMessage(error),
                     style:
                         TextStyle(color: _black.withOpacity(0.8), fontSize: 14),
                   ),
@@ -953,6 +986,14 @@ class _ResultSection extends StatelessWidget {
       },
     );
   }
+}
+
+String _friendlyErrorMessage(Object error) {
+  final String message = error.toString().replaceFirst('Exception: ', '').trim();
+  if (message.toLowerCase().contains('no face detected')) {
+    return 'لم يتم اكتشاف وجه داخل الإطار. يرجى وضع وجهك داخل الإطار والمحاولة مرة أخرى.';
+  }
+  return message;
 }
 
 class _DetailRow extends StatelessWidget {

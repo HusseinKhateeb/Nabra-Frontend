@@ -313,7 +313,7 @@ class LipReadingApi {
   String _toUserFriendlyMessage(String message) {
     final String normalized = message.toLowerCase();
     if (normalized.contains('no face detected in video frames')) {
-      return 'No face was detected. Please keep your full face visible, look at the camera directly, and record in good lighting.';
+      return 'No face detected. Please keep your face inside the frame and try again.';
     }
     if (normalized.contains('لم يتم ارجاع الصوت') ||
         normalized.contains('لم يتم إرجاع الصوت') ||

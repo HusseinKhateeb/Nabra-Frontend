@@ -55,14 +55,17 @@ class AuthInterceptor extends Interceptor {
     final int? status = err.response?.statusCode;
     final String path = err.requestOptions.path;
     final bool protectedEndpoint = !_isPublicEndpoint(path);
+    // Only treat hard connection failures (refused, not just timeout) as backend down.
+    final bool backendDown = err.type == DioExceptionType.connectionError;
 
     // Clear stale token only on 401 (unauthenticated). Do not clear on 403,
     // because backend endpoint/business errors can surface as 403 on /error.
-    if (protectedEndpoint && status == 401) {
+    // Also clear on hard connection failures so the router can send the user back to login.
+    if (protectedEndpoint && (status == 401 || backendDown)) {
       await _tokenStorage.clear();
       authSessionNotifier.markLoggedOut();
       if (kDebugMode) {
-        debugPrint('[Auth] Cleared local tokens after $status on $path');
+        debugPrint('[Auth] Cleared local tokens after ${status ?? err.type} on $path');
       }
     }
 
