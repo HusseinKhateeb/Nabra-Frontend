@@ -189,8 +189,8 @@ class _WordCardState extends ConsumerState<WordCard> {
                         widget.word.favorite = newValue;
                       });
 
-                      // تحديث قائمة الكلمات
-                      ref.invalidate(wordsProvider(widget.categoryId));
+                      // Refresh the category payload so the embedded words list stays in sync.
+                      ref.invalidate(categoriesProvider);
                     },
                     child: Icon(
                       widget.word.favorite
