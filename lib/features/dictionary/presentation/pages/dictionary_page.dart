@@ -3,8 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/router/app_routes.dart';
-import '../../data/models/category_model.dart';
-import '../../data/models/word_model.dart';
 import '../../providers/dictionary_providers.dart';
 import '../widgets/category_tabs.dart';
 import '../widgets/word_card.dart';
@@ -161,44 +159,40 @@ class DictionaryPage extends ConsumerWidget {
 
               /// Words Grid
               Expanded(
-                child: categoriesAsync.when(
-                  loading: () =>
-                      const Center(child: CircularProgressIndicator()),
-                  error: (e, _) => Center(child: Text(e.toString())),
-                  data: (cats) {
-                    final CategoryModel? category = selectedCategory == null
-                        ? null
-                        : cats.where((cat) => cat.id == selectedCategory).isNotEmpty
-                            ? cats.firstWhere((cat) => cat.id == selectedCategory)
-                            : null;
+                child: selectedCategory == null
+                    ? const SizedBox()
+                    : ref.watch(wordsProvider(selectedCategory)).when(
+                          loading: () =>
+                              const Center(child: CircularProgressIndicator()),
+                          error: (e, _) => Center(child: Text(e.toString())),
+                          data: (words) {
+                            final filtered = words
+                                .where((w) => w.text.contains(searchQuery))
+                                .toList();
 
-                    final List<WordModel> words = category?.words ?? const [];
-                    final filtered = words
-                        .where((w) => w.text.contains(searchQuery))
-                        .toList();
+                            if (filtered.isEmpty) {
+                              return const Center(child: Text('لا يوجد كلمات'));
+                            }
 
-                    if (filtered.isEmpty) {
-                      return const Center(child: Text('لا يوجد كلمات'));
-                    }
-
-                    return GridView.builder(
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      gridDelegate:
-                          const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 2,
-                        crossAxisSpacing: 12,
-                        mainAxisSpacing: 12,
-                        childAspectRatio: 0.72,
-                      ),
-                      itemCount: filtered.length,
-                      itemBuilder: (context, i) => WordCard(
-                        key: ValueKey(filtered[i].id),
-                        word: filtered[i],
-                        categoryId: selectedCategory ?? '',
-                      ),
-                    );
-                  },
-                ),
+                            return GridView.builder(
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 12),
+                              gridDelegate:
+                                  const SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: 2,
+                                crossAxisSpacing: 12,
+                                mainAxisSpacing: 12,
+                                childAspectRatio: 0.72,
+                              ),
+                              itemCount: filtered.length,
+                              itemBuilder: (context, i) => WordCard(
+                                key: ValueKey(filtered[i].id),
+                                word: filtered[i],
+                                categoryId: selectedCategory,
+                              ),
+                            );
+                          },
+                        ),
               ),
             ],
           ),
