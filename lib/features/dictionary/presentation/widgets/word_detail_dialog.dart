@@ -15,43 +15,74 @@ class _WordDetailDialogState extends State<WordDetailDialog> {
   VideoPlayerController? _controller;
   bool _showPlayButton = false;
 
-  @override
-  void initState() {
-    super.initState();
-    if (widget.word.videoUrl != null && widget.word.videoUrl!.isNotEmpty) {
-      final baseUrl = AppConfig.serverBaseUrl;
-      final fullVideoUrl = '$baseUrl${widget.word.videoUrl}';
-      // Debug print to verify the video URL
-      // ignore: avoid_print
-      print('WordDetailDialog video URL: ' + fullVideoUrl);
-      _controller = VideoPlayerController.networkUrl(Uri.parse(fullVideoUrl))
-        ..initialize().then((_) {
-          setState(() {});
-        }).catchError((e) {
-          // ignore: avoid_print
-          print('Video initialization error: ' + e.toString());
-        });
-      _controller?.addListener(() {
-        final isEnded = _controller!.value.position >= _controller!.value.duration && !_controller!.value.isPlaying;
-        final isPlaying = _controller!.value.isPlaying;
-        if (isEnded) {
-          if (!_showPlayButton) {
-            setState(() {
-              _showPlayButton = true;
-            });
-          }
-        } else if (isPlaying && _showPlayButton) {
-          setState(() {
-            _showPlayButton = false;
-          });
-        }
+  void _onVideoTick() {
+    final controller = _controller;
+    if (controller == null || !mounted) {
+      return;
+    }
+
+    final value = controller.value;
+    final isEnded = value.isInitialized &&
+        value.position >= value.duration &&
+        !value.isPlaying;
+    final isPlaying = value.isPlaying;
+
+    if (isEnded && !_showPlayButton) {
+      setState(() {
+        _showPlayButton = true;
+      });
+    } else if (isPlaying && _showPlayButton) {
+      setState(() {
+        _showPlayButton = false;
       });
     }
   }
 
+  Future<void> _initializeVideo() async {
+    final rawVideoUrl = widget.word.videoUrl;
+    if (rawVideoUrl == null || rawVideoUrl.isEmpty) {
+      return;
+    }
+
+    final baseUrl = AppConfig.serverBaseUrl;
+    final encodedVideoUrl = Uri.encodeFull(rawVideoUrl);
+    final fullVideoUrl = '$baseUrl$encodedVideoUrl';
+    // ignore: avoid_print
+    print('WordDetailDialog video URL: ' + fullVideoUrl);
+
+    final controller = VideoPlayerController.networkUrl(
+      Uri.parse(fullVideoUrl),
+    );
+    _controller = controller;
+
+    try {
+      await controller.initialize();
+      if (!mounted || _controller != controller) {
+        await controller.dispose();
+        return;
+      }
+      controller.addListener(_onVideoTick);
+      await controller.play();
+      if (mounted) {
+        setState(() {
+          _showPlayButton = false;
+        });
+      }
+    } catch (e) {
+      // ignore: avoid_print
+      print('Video initialization error: ' + e.toString());
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeVideo();
+  }
+
   @override
   void dispose() {
-    _controller?.removeListener(() {});
+    _controller?.removeListener(_onVideoTick);
     _controller?.dispose();
     super.dispose();
   }

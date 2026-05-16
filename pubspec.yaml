@@ -48,6 +48,7 @@ dependencies:
 
   # ▶️ VIDEO PLAYER (ضروري للقاموس البصري)
   video_player: ^2.8.2
+  video_thumbnail: ^0.5.3
 
 
 dev_dependencies:

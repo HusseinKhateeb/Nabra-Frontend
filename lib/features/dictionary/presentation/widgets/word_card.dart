@@ -1,6 +1,8 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:video_player/video_player.dart';
+import 'package:video_thumbnail/video_thumbnail.dart';
 import 'word_detail_dialog.dart';
 
 import '../../data/models/word_model.dart';
@@ -22,58 +24,42 @@ class WordCard extends ConsumerStatefulWidget {
 }
 
 class _WordCardState extends ConsumerState<WordCard> {
-  VideoPlayerController? _controller;
-  bool _showPlayButton = false;
+  Future<Uint8List?>? _thumbnailFuture;
 
-  void _handleVideoTick() {
-    final controller = _controller;
-    if (controller == null || !mounted) {
-      return;
+  String? get _videoUrl => widget.word.videoUrl;
+
+  String? get _fullVideoUrl {
+    final videoUrl = _videoUrl;
+    if (videoUrl == null || videoUrl.isEmpty) {
+      return null;
     }
+    return '${AppConfig.serverBaseUrl}${Uri.encodeFull(videoUrl)}';
+  }
 
-    final value = controller.value;
-    final isEnded = value.isInitialized &&
-        value.position >= value.duration &&
-        !value.isPlaying;
-
-    if (isEnded && !_showPlayButton) {
-      setState(() {
-        _showPlayButton = true;
-      });
+  Future<Uint8List?> _buildThumbnail(String fullVideoUrl) async {
+    try {
+      return await VideoThumbnail.thumbnailData(
+        video: fullVideoUrl,
+        imageFormat: ImageFormat.JPEG,
+        maxHeight: 300,
+        quality: 75,
+      );
+    } catch (e) {
+      // ignore: avoid_print
+      print('Thumbnail generation failed: ' + e.toString());
+      return null;
     }
   }
 
-  Future<void> _initializeController() async {
-    final videoUrl = widget.word.videoUrl;
-    if (videoUrl == null || videoUrl.isEmpty) {
-      return;
-    }
-
-    final baseUrl = AppConfig.serverBaseUrl;
-    final fullVideoUrl = '$baseUrl$videoUrl';
-    // ignore: avoid_print
-    print('WordCard video URL: ' + fullVideoUrl);
-
-    final controller = VideoPlayerController.networkUrl(
-      Uri.parse(fullVideoUrl),
-    );
-
-    _controller = controller;
-    await controller.initialize();
-
-    if (!mounted || _controller != controller) {
-      await controller.dispose();
-      return;
-    }
-
-    controller.addListener(_handleVideoTick);
-    setState(() {});
+  void _syncThumbnail() {
+    final fullVideoUrl = _fullVideoUrl;
+    _thumbnailFuture = fullVideoUrl == null ? null : _buildThumbnail(fullVideoUrl);
   }
 
   @override
   void initState() {
     super.initState();
-    _initializeController();
+    _syncThumbnail();
   }
 
   @override
@@ -82,12 +68,7 @@ class _WordCardState extends ConsumerState<WordCard> {
 
     if (oldWidget.word.id != widget.word.id ||
         oldWidget.word.videoUrl != widget.word.videoUrl) {
-      final oldController = _controller;
-      _controller = null;
-      _showPlayButton = false;
-      oldController?.removeListener(_handleVideoTick);
-      oldController?.dispose();
-      _initializeController();
+      _syncThumbnail();
     }
   }
 
@@ -99,15 +80,9 @@ class _WordCardState extends ConsumerState<WordCard> {
   }
 
   @override
-  void dispose() {
-    _controller?.removeListener(_handleVideoTick);
-    _controller?.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final hasVideo = _controller != null;
+    final hasVideo =
+        widget.word.videoUrl != null && widget.word.videoUrl!.isNotEmpty;
 
     return GestureDetector(
       onTap: _openDetailDialog,
@@ -130,40 +105,46 @@ class _WordCardState extends ConsumerState<WordCard> {
               borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
               child: AspectRatio(
                 aspectRatio: 1,
-                child: (hasVideo && _controller!.value.isInitialized)
-                    ? Stack(
-                        alignment: Alignment.center,
-                        children: [
-                          SizedBox.expand(
-                            child: FittedBox(
-                              fit: BoxFit.cover,
-                              clipBehavior: Clip.hardEdge,
-                              child: SizedBox(
-                                width: _controller!.value.size.width,
-                                height: _controller!.value.size.height,
-                                child: VideoPlayer(_controller!),
-                              ),
-                            ),
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    FutureBuilder<Uint8List?>(
+                      future: _thumbnailFuture,
+                      builder: (context, snapshot) {
+                        final bytes = snapshot.data;
+
+                        if (bytes != null && bytes.isNotEmpty) {
+                          return Image.memory(
+                            bytes,
+                            fit: BoxFit.cover,
+                            gaplessPlayback: true,
+                          );
+                        }
+
+                        return Container(
+                          color: Colors.grey.shade200,
+                          alignment: Alignment.center,
+                          child: Icon(
+                            hasVideo ? Icons.videocam : Icons.image_not_supported,
+                            size: 44,
+                            color: Colors.grey.shade500,
                           ),
-                          if (_showPlayButton || !_controller!.value.isPlaying)
-                            IconButton(
-                              iconSize: 54,
-                              color: Colors.white,
-                              icon: Icon(Icons.play_circle),
-                              onPressed: _openDetailDialog,
-                            ),
-                        ],
-                      )
-                    : Container(
-                        color: Colors.grey.shade200,
-                        alignment: Alignment.center,
-                        child: IconButton(
-                          iconSize: 54,
-                          color: hasVideo ? Colors.red : Colors.grey,
-                          icon: Icon(hasVideo ? Icons.play_circle_fill : Icons.videocam),
-                          onPressed: hasVideo ? _openDetailDialog : null,
-                        ),
+                        );
+                      },
+                    ),
+                    Container(
+                      color: Colors.black.withOpacity(0.12),
+                    ),
+                    Center(
+                      child: IconButton(
+                        iconSize: 54,
+                        color: Colors.white,
+                        icon: const Icon(Icons.play_circle),
+                        onPressed: hasVideo ? _openDetailDialog : null,
                       ),
+                    ),
+                  ],
+                ),
               ),
             ),
 
