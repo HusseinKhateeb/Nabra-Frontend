@@ -25,29 +25,69 @@ class _WordCardState extends ConsumerState<WordCard> {
   VideoPlayerController? _controller;
   bool _showPlayButton = false;
 
+  void _handleVideoTick() {
+    final controller = _controller;
+    if (controller == null || !mounted) {
+      return;
+    }
+
+    final value = controller.value;
+    final isEnded = value.isInitialized &&
+        value.position >= value.duration &&
+        !value.isPlaying;
+
+    if (isEnded && !_showPlayButton) {
+      setState(() {
+        _showPlayButton = true;
+      });
+    }
+  }
+
+  Future<void> _initializeController() async {
+    final videoUrl = widget.word.videoUrl;
+    if (videoUrl == null || videoUrl.isEmpty) {
+      return;
+    }
+
+    final baseUrl = AppConfig.serverBaseUrl;
+    final fullVideoUrl = '$baseUrl$videoUrl';
+    // ignore: avoid_print
+    print('WordCard video URL: ' + fullVideoUrl);
+
+    final controller = VideoPlayerController.networkUrl(
+      Uri.parse(fullVideoUrl),
+    );
+
+    _controller = controller;
+    await controller.initialize();
+
+    if (!mounted || _controller != controller) {
+      await controller.dispose();
+      return;
+    }
+
+    controller.addListener(_handleVideoTick);
+    setState(() {});
+  }
+
   @override
   void initState() {
     super.initState();
-    if (widget.word.videoUrl != null && widget.word.videoUrl!.isNotEmpty) {
-      final baseUrl = AppConfig.serverBaseUrl;
-      final fullVideoUrl = '$baseUrl${widget.word.videoUrl}';
-      // Debug print to verify the video URL
-      // ignore: avoid_print
-      print('WordCard video URL: ' + fullVideoUrl);
-      _controller = VideoPlayerController.networkUrl(
-        Uri.parse(fullVideoUrl),
-      )..initialize().then((_) {
-          if (mounted) setState(() {});
-        });
-      _controller?.addListener(() {
-        if (_controller!.value.position >= _controller!.value.duration && !_controller!.value.isPlaying) {
-          if (!_showPlayButton) {
-            setState(() {
-              _showPlayButton = true;
-            });
-          }
-        }
-      });
+    _initializeController();
+  }
+
+  @override
+  void didUpdateWidget(covariant WordCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    if (oldWidget.word.id != widget.word.id ||
+        oldWidget.word.videoUrl != widget.word.videoUrl) {
+      final oldController = _controller;
+      _controller = null;
+      _showPlayButton = false;
+      oldController?.removeListener(_handleVideoTick);
+      oldController?.dispose();
+      _initializeController();
     }
   }
 
@@ -60,7 +100,7 @@ class _WordCardState extends ConsumerState<WordCard> {
 
   @override
   void dispose() {
-    _controller?.removeListener(() {});
+    _controller?.removeListener(_handleVideoTick);
     _controller?.dispose();
     super.dispose();
   }

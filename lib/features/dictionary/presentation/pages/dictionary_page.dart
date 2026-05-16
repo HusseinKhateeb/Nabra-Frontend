@@ -186,6 +186,7 @@ class DictionaryPage extends ConsumerWidget {
                               ),
                               itemCount: filtered.length,
                               itemBuilder: (context, i) => WordCard(
+                                key: ValueKey(filtered[i].id),
                                 word: filtered[i],
                                 categoryId: selectedCategory,
                               ),
