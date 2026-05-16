@@ -47,8 +47,21 @@ class PermissionsPage extends StatelessWidget {
                     height: 1.6,
                   ),
                 ),
+                
+                const SizedBox(height: 12),
 
-                const SizedBox(height: 60),
+                const Text(
+                  'نقوم بدمج صورة الشفاه (الفيديو) مع الصوت لزيادة دقة فهم الكلام.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Colors.black87,
+                    height: 1.6,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+
+                const SizedBox(height: 40),
 
                 /// Camera Permission
                 Container(
@@ -77,7 +90,7 @@ class PermissionsPage extends StatelessWidget {
                             ),
                             SizedBox(height: 8),
                             Text(
-                              'نحتاج للوصول إلى كاميرتك لتحليل حركات شفاهك',
+                              'نحتاج الوصول إلى الكاميرا لتحليل حركات شفاهك ودمجها مع الصوت لفهم الكلام بدقة أكبر',
                               style: TextStyle(
                                 fontSize: 13,
                                 height: 1.5,
@@ -130,7 +143,7 @@ class PermissionsPage extends StatelessWidget {
                             ),
                             SizedBox(height: 8),
                             Text(
-                              'نحتاج للوصول إلى الميكروفون لتحويل النص إلى صوت',
+                              'نحتاج الوصول إلى الميكروفون لتسجيل الصوت ودمجه مع قراءة الشفاه',
                               style: TextStyle(
                                 fontSize: 13,
                                 height: 1.5,

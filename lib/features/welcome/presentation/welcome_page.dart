@@ -29,30 +29,48 @@ class WelcomePage extends StatelessWidget {
                   ),
                 ),
                 SizedBox(height: 60),
-                // Image Placeholder
-                Container(
-                  width: 200,
-                  height: 200,
-                  decoration: BoxDecoration(
-                    color: Color(0xFFE8E8E8),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Center(
-                    child: Text(
-                      'صورة التطبيق',
-                      style: TextStyle(color: Colors.grey[600], fontSize: 16),
+                // Framed App logo
+                Center(
+                  child: Container(
+                    width: 220,
+                    height: 220,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Color(0xFFEEEEEE), width: 2),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.08),
+                          blurRadius: 12,
+                          offset: Offset(0, 6),
+                        ),
+                      ],
+                    ),
+                    padding: EdgeInsets.all(18),
+                    child: ClipOval(
+                      child: Image.asset(
+                        'lib/assets/images/Nabra-Logo.png',
+                        fit: BoxFit.contain,
+                        errorBuilder: (context, error, stackTrace) => Center(
+                          child: Icon(
+                            Icons.image_not_supported,
+                            size: 40,
+                            color: Colors.grey,
+                          ),
+                        ),
+                      ),
                     ),
                   ),
                 ),
                 SizedBox(height: 60),
                 // Description Text
                 Text(
-                  'تجربة مبتكرة لتحويل حركات الشفاه الى نصوص واصوات باللغة العربية بدقة وسهولة',
+                  'نُدمج فيديو الشفاه مع الصوت للحصول على فهم أدق للكلام.',
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    fontSize: 14,
+                    fontSize: 15,
                     color: Colors.black87,
-                    height: 1.6,
+                    height: 1.7,
                   ),
                 ),
                 SizedBox(height: 80),

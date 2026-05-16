@@ -27,29 +27,24 @@ class WelcomePage extends StatelessWidget {
                 ),
                 SizedBox(height: 60),
                 // Image Placeholder
-                Container(
-                  width: 200,
-                  height: 200,
-                  decoration: BoxDecoration(
-                    color: Color(0xFFE8E8E8),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Center(
-                    child: Text(
-                      'صورة التطبيق',
-                      style: TextStyle(color: Colors.grey[600], fontSize: 16),
-                    ),
+                // App logo
+                Center(
+                  child: Image.asset(
+                    'lib/assets/images/Nabra-Logo.png',
+                    width: 200,
+                    height: 200,
+                    fit: BoxFit.contain,
                   ),
                 ),
                 SizedBox(height: 60),
                 // Description Text
                 Text(
-                  'حملة مشروع بتحسين مهارات الاصغاء لدى الأشخاص الصم والبكم من خلال تقنية الذكاء الاصطناعي',
+                  'نُدمج فيديو الشفاه مع الصوت للحصول على فهم أدق للكلام.',
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    fontSize: 14,
+                    fontSize: 15,
                     color: Colors.black87,
-                    height: 1.6,
+                    height: 1.7,
                   ),
                 ),
                 SizedBox(height: 80),
