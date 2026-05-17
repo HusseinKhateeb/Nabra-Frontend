@@ -1,3 +1,4 @@
+// ignore: uri_does_not_exist
 import 'package:flutter/material.dart';
 
 class VoiceInferResultWidget extends StatelessWidget {

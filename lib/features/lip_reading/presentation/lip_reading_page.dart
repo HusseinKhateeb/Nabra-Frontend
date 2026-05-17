@@ -859,6 +859,10 @@ class _ResultSection extends StatelessWidget {
             ? '${(finalConfidence * 100).toStringAsFixed(1)}%'
             : '${finalConfidence.toStringAsFixed(1)}%';
 
+        // Determine if audio text is effectively missing (empty or backend fallback message)
+        final bool audioMissing = response.audioText.trim().isEmpty ||
+          response.audioText.trim() == 'لم يتم إرجاع نص صوتي';
+
         return Container(
           decoration: BoxDecoration(
             color: Colors.white,
@@ -924,21 +928,7 @@ class _ResultSection extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 10),
-                    Row(
-                      children: [
-                        const Icon(Icons.verified,
-                            color: Colors.white, size: 18),
-                        const SizedBox(width: 8),
-                        Text(
-                          'نسبة الثقة: $finalConfidenceText',
-                          style: TextStyle(
-                            color: Colors.white.withOpacity(0.9),
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
+                    // Confidence percentage intentionally hidden per UX request.
                   ],
                 ),
               ),
@@ -964,16 +954,31 @@ class _ResultSection extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 8),
-                    Text(
-                      response.audioText.isNotEmpty
-                          ? response.audioText
-                          : 'لم يتم إرجاع نص صوتي',
-                      style: TextStyle(
-                        color: _black.withOpacity(0.9),
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
+                    if (!audioMissing)
+                      Text(
+                        response.audioText,
+                        style: TextStyle(
+                          color: _black.withOpacity(0.9),
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      )
+                    else
+                      Row(
+                        children: [
+                          const Icon(Icons.error_outline,
+                              color: _darkRed, size: 18),
+                          const SizedBox(width: 8),
+                          Text(
+                            'لم يتم إرجاع نص صوتي',
+                            style: TextStyle(
+                              color: _darkRed.withOpacity(0.9),
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
                   ],
                 ),
               ),
