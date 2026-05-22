@@ -173,7 +173,11 @@ To add a new language:
 
 ---
 
-## 👤 Author
+## 👥 Authors
 
 **Hussein Khateeb**
 [GitHub](https://github.com/HusseinKhateeb) · [LinkedIn](https://linkedin.com/in/hussein-khateeb-33464a352)
+
+**Imad Swaitti**
+
+**Saja Shawawra**
