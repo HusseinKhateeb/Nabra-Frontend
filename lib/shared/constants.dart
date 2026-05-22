@@ -1,5 +1,6 @@
 class StorageKeys {
-  static const accessToken = 'access_token';
+  static const accessToken = 'accessToken';
   static const refreshToken = 'refresh_token';
   static const preferredLanguage = 'preferred_language';
+  static const onboardingCompleted = 'onboarding_completed';
 }

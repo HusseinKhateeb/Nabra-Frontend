@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:dio/dio.dart';
 
 import '../../../core/router/app_routes.dart';
 import '../../../core/utils/validators.dart';
@@ -15,14 +16,36 @@ class RegisterPage extends ConsumerStatefulWidget {
 
 class _RegisterPageState extends ConsumerState<RegisterPage> {
   final _formKey = GlobalKey<FormState>();
-  final _name = TextEditingController();
-  final _email = TextEditingController();
+
+  final _fullName = TextEditingController();
+  final _username = TextEditingController();
+  final _email = TextEditingController(); // ✅ أضفناه
   final _password = TextEditingController();
-  String _lang = 'en';
+
+  bool _obscure = true;
+
+  String _extractErrorMessage(Object error) {
+    if (error is DioException) {
+      final data = error.response?.data;
+      if (data is Map<String, dynamic>) {
+        final dynamic message = data['message'] ?? data['error'] ?? data['detail'];
+        if (message != null && message.toString().trim().isNotEmpty) {
+          return message.toString();
+        }
+      }
+      if (data is String && data.trim().isNotEmpty) {
+        return data;
+      }
+      return 'فشل إنشاء الحساب. تأكد من البيانات وحاول مرة أخرى.';
+    }
+
+    return error.toString();
+  }
 
   @override
   void dispose() {
-    _name.dispose();
+    _fullName.dispose();
+    _username.dispose();
     _email.dispose();
     _password.dispose();
     super.dispose();
@@ -35,77 +58,174 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
     ref.listen(authControllerProvider, (prev, next) {
       if (next.hasError) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(next.error.toString())),
+          SnackBar(content: Text(_extractErrorMessage(next.error!))),
         );
       }
+
       if (prev is AsyncLoading && next is AsyncData) {
         context.go(AppRoutes.login);
       }
     });
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('Register')),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Form(
-          key: _formKey,
-          child: ListView(
-            children: [
-              TextFormField(
-                controller: _name,
-                decoration: const InputDecoration(labelText: 'Full name'),
-                validator: Validators.requiredField,
-              ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: _email,
-                decoration: const InputDecoration(labelText: 'Email'),
-                validator: Validators.email,
-              ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: _password,
-                decoration: const InputDecoration(labelText: 'Password'),
-                obscureText: true,
-                validator: Validators.requiredField,
-              ),
-              const SizedBox(height: 12),
-              DropdownButtonFormField<String>(
-                value: _lang,
-                decoration: const InputDecoration(labelText: 'Preferred language'),
-                items: const [
-                  DropdownMenuItem(value: 'en', child: Text('English')),
-                  DropdownMenuItem(value: 'ar', child: Text('Arabic')),
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Scaffold(
+        backgroundColor: const Color(0xFFF5F5F5),
+        body: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  /// 🔙 Back
+                  Align(
+                    alignment: Alignment.topLeft,
+                    child: GestureDetector(
+                      onTap: () => context.pop(),
+                      child: Container(
+                        width: 40,
+                        height: 40,
+                        decoration: const BoxDecoration(
+                          color: Color(0xFFEF6E6E),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.arrow_forward,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  const Text(
+                    'إنشاء حساب',
+                    style: TextStyle(
+                      fontSize: 26,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+
+                  const SizedBox(height: 8),
+
+                  const Text(
+                    'املأ معلوماتك أدناه لإنشاء حساب جديد',
+                    style: TextStyle(color: Colors.grey),
+                  ),
+
+                  const SizedBox(height: 32),
+
+                  /// Full Name
+                  TextFormField(
+                    controller: _fullName,
+                    textAlign: TextAlign.right,
+                    decoration: const InputDecoration(
+                      labelText: 'الاسم',
+                      border: OutlineInputBorder(),
+                    ),
+                    validator: Validators.requiredField,
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  /// Username
+                  TextFormField(
+                    controller: _username,
+                    textAlign: TextAlign.right,
+                    decoration: const InputDecoration(
+                      labelText: 'اسم المستخدم',
+                      border: OutlineInputBorder(),
+                    ),
+                    validator: Validators.requiredField,
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  /// Email
+                  TextFormField(
+                    controller: _email,
+                    textAlign: TextAlign.right,
+                    decoration: const InputDecoration(
+                      labelText: 'البريد الإلكتروني',
+                      border: OutlineInputBorder(),
+                    ),
+                    validator: Validators.email,
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  /// Password
+                  TextFormField(
+                    controller: _password,
+                    obscureText: _obscure,
+                    textAlign: TextAlign.right,
+                    decoration: InputDecoration(
+                      labelText: 'كلمة المرور',
+                      border: const OutlineInputBorder(),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _obscure ? Icons.visibility_off : Icons.visibility,
+                        ),
+                        onPressed: () => setState(() => _obscure = !_obscure),
+                      ),
+                    ),
+                    validator: Validators.requiredField,
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  /// Register Button
+                  SizedBox(
+                    width: double.infinity,
+                    height: 48,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFD32F2F),
+                      ),
+                      onPressed: state is AsyncLoading
+                          ? null
+                          : () {
+                              if (!_formKey.currentState!.validate()) return;
+
+                              ref
+                                  .read(authControllerProvider.notifier)
+                                  .register(
+                                    username: _username.text.trim(),
+                                    email: _email.text.trim(),
+                                    password: _password.text,
+                                    displayName: _fullName.text.trim(),
+                                  );
+                            },
+                      child: state is AsyncLoading
+                          ? const CircularProgressIndicator(
+                              color: Colors.white,
+                            )
+                          : const Text('إنشاء حساب'),
+                    ),
+                  ),
+
+                  const SizedBox(height: 32),
+
+                  /// Login
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Text('لديك حساب مسبقاً؟'),
+                      TextButton(
+                        onPressed: () => context.go(AppRoutes.login),
+                        child: const Text(
+                          'تسجيل الدخول',
+                          style: TextStyle(color: Colors.red),
+                        ),
+                      ),
+                    ],
+                  ),
                 ],
-                onChanged: (v) => setState(() => _lang = v ?? 'en'),
               ),
-              const SizedBox(height: 16),
-              FilledButton(
-                onPressed: state is AsyncLoading
-                    ? null
-                    : () {
-                        if (!_formKey.currentState!.validate()) return;
-                        ref.read(authControllerProvider.notifier).register(
-                              fullName: _name.text.trim(),
-                              email: _email.text.trim(),
-                              password: _password.text,
-                              preferredLanguage: _lang,
-                            );
-                      },
-                child: state is AsyncLoading
-                    ? const SizedBox(
-                        height: 18,
-                        width: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Text('Create account'),
-              ),
-              const SizedBox(height: 8),
-              TextButton(
-                onPressed: () => context.go(AppRoutes.login),
-                child: const Text('Back to login'),
-              ),
-            ],
+            ),
           ),
         ),
       ),

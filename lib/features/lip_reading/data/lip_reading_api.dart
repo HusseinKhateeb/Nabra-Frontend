@@ -1,0 +1,328 @@
+import 'dart:convert';
+import 'dart:io';
+
+import 'package:dio/dio.dart';
+
+import '../../../core/config/api_endpoints.dart';
+import '../../../core/network/dio_client.dart';
+import '../domain/avsr_models.dart';
+
+class LipReadingApi {
+
+    // ...existing code...
+  LipReadingApi(this._client);
+
+  final DioClient _client;
+
+  Future<AvsrFusionResponse> fuseFiles({
+    required File audioFile,
+    required File videoFile,
+    int frameCount = 25,
+    bool fast = false,
+  }) async {
+    final Map<String, dynamic> data = {
+      'audioFile': await MultipartFile.fromFile(
+        audioFile.path,
+        filename: audioFile.uri.pathSegments.last,
+      ),
+      'videoFile': await MultipartFile.fromFile(
+        videoFile.path,
+        filename: videoFile.uri.pathSegments.last,
+      ),
+      'wait': 'true',
+      'timeoutSeconds': '240',
+      'frameCount': frameCount.toString(),
+      'fast': fast.toString(),
+    };
+    final FormData formData = FormData.fromMap(data);
+
+    try {
+      final Response<dynamic> res = await _client.dio.post(
+        ApiEndpoints.lipReadingAvsrFuseFiles,
+        data: formData,
+        options: Options(
+          contentType: 'multipart/form-data',
+          responseType: ResponseType.plain,
+          sendTimeout: const Duration(minutes: 5),
+          receiveTimeout: const Duration(minutes: 5),
+        ),
+      );
+
+      await _deleteRejectedSessionIfNeeded(res.data);
+      return _parseFusionResponse(res.data);
+    } on DioException catch (error) {
+      final int? statusCode = error.response?.statusCode;
+      final String backendMessage = _extractErrorMessage(error.response?.data);
+      final String fallbackMessage = (error.message ?? '').trim();
+      final String innerError = (error.error?.toString() ?? '').trim();
+      final String requestMethod = error.requestOptions.method;
+      final String requestUri = error.requestOptions.uri.toString();
+      final String detail = backendMessage.isNotEmpty
+          ? backendMessage
+        : (fallbackMessage.isNotEmpty
+          ? fallbackMessage
+          : (innerError.isNotEmpty ? innerError : 'Request failed.'));
+      final String friendlyDetail = _toUserFriendlyMessage(detail);
+
+      final String message;
+      switch (error.type) {
+        case DioExceptionType.connectionTimeout:
+        case DioExceptionType.sendTimeout:
+        case DioExceptionType.receiveTimeout:
+          message = 'Request timed out. Please try again.';
+          break;
+        case DioExceptionType.connectionError:
+          message = 'Cannot reach server. Check network and API base URL. [$requestMethod $requestUri] $friendlyDetail';
+          break;
+        case DioExceptionType.badResponse:
+          if (statusCode != null) {
+            message = 'Server error ($statusCode): $friendlyDetail';
+          } else {
+            message = 'Server returned an invalid response: $friendlyDetail';
+          }
+          break;
+        case DioExceptionType.cancel:
+          message = 'Request was cancelled.';
+          break;
+        case DioExceptionType.badCertificate:
+          message = 'Secure connection failed (certificate error). [$requestMethod $requestUri] $friendlyDetail';
+          break;
+        case DioExceptionType.unknown:
+          message = 'Request failed. [$requestMethod $requestUri] $friendlyDetail';
+          break;
+      }
+      throw Exception(message);
+    }
+  }
+
+  String _extractErrorMessage(dynamic body) {
+    if (body == null) return '';
+
+    if (body is String) {
+      final String trimmed = body.trim();
+      if (trimmed.isEmpty) return '';
+      try {
+        final dynamic decoded = jsonDecode(trimmed);
+        if (decoded is Map<String, dynamic>) {
+          final String fromJson = _extractErrorMessageFromMap(decoded);
+          if (fromJson.isNotEmpty) {
+            return fromJson;
+          }
+        }
+      } catch (_) {
+        // Keep raw string
+      }
+      return trimmed;
+    }
+
+    if (body is Map<String, dynamic>) {
+      return _extractErrorMessageFromMap(body);
+    }
+
+    return body.toString().trim();
+  }
+
+  String _extractErrorMessageFromMap(Map<String, dynamic> body) {
+    final List<String> knownKeys = <String>['message', 'error', 'detail', 'title'];
+    for (final key in knownKeys) {
+      final dynamic value = body[key];
+      if (value is String && value.trim().isNotEmpty) {
+        return value.trim();
+      }
+    }
+
+    final dynamic errors = body['errors'];
+    if (errors is List) {
+      final String merged = errors.map((e) => e.toString()).join(' | ').trim();
+      if (merged.isNotEmpty) {
+        return merged;
+      }
+    }
+
+    return body.toString().trim();
+  }
+
+  AvsrFusionResponse _parseFusionResponse(dynamic body) {
+    if (body is Map<String, dynamic>) {
+      final dynamic ok = body['ok'];
+      if (ok is bool) {
+        if (!ok) {
+          final String error = (body['error'] as String?)?.trim() ?? 'AVSR worker failed.';
+          throw Exception(_toUserFriendlyMessage(error));
+        }
+
+        final String rawOutput = (body['rawOutput'] as String?)?.trim() ?? '';
+        final Map<String, dynamic>? decodedRaw = _tryDecodeJsonObjectFromText(rawOutput);
+        if (decodedRaw != null) {
+          return AvsrFusionResponse.fromJson(decodedRaw);
+        }
+        return AvsrFusionResponse.fromRawOutput(rawOutput);
+      }
+
+      final Map<String, dynamic> normalizedPayload =
+          _unwrapResultPayload(body);
+      return AvsrFusionResponse.fromJson(normalizedPayload);
+    }
+
+    if (body is String) {
+      final String trimmed = body.trim();
+      final Map<String, dynamic>? decoded = _tryDecodeJsonObjectFromText(trimmed);
+      if (decoded != null) {
+        return _parseFusionResponse(decoded);
+      }
+
+      final String friendly = _toUserFriendlyMessage(trimmed);
+      if (friendly != trimmed) {
+        throw Exception(friendly);
+      }
+
+      return AvsrFusionResponse.fromRawOutput(trimmed);
+    }
+
+    return AvsrFusionResponse.fromRawOutput(body?.toString() ?? '');
+  }
+
+  Future<void> _deleteRejectedSessionIfNeeded(dynamic body) async {
+    final Map<String, dynamic>? payload = _extractPayloadMap(body);
+    final String message = _extractNoAudioMessage(body, payload);
+    if (message.isEmpty) return;
+
+    final String? sessionId = _extractSessionId(payload ?? <String, dynamic>{});
+    if (sessionId != null && sessionId.isNotEmpty) {
+      try {
+        await _client.dio.delete(ApiEndpoints.sessionById(sessionId));
+      } catch (_) {
+        // Best-effort cleanup. The user-facing rejection message still wins.
+      }
+    }
+
+    throw Exception(message);
+  }
+
+  Map<String, dynamic> _unwrapResultPayload(Map<String, dynamic> payload) {
+    final dynamic result = payload['result'];
+    if (result is Map<String, dynamic>) {
+      return result;
+    }
+    return payload;
+  }
+
+  Map<String, dynamic>? _tryDecodeJsonObjectFromText(String text) {
+    if (text.isEmpty) return null;
+
+    try {
+      final dynamic direct = jsonDecode(text);
+      if (direct is Map<String, dynamic>) {
+        return direct;
+      }
+    } catch (_) {
+      // Try extracting JSON suffix from mixed logs + JSON content.
+    }
+
+    int start = text.indexOf('{');
+    while (start != -1) {
+      final String candidate = text.substring(start).trim();
+      try {
+        final dynamic decoded = jsonDecode(candidate);
+        if (decoded is Map<String, dynamic>) {
+          return decoded;
+        }
+      } catch (_) {
+        // Move to next possible JSON object start.
+      }
+      start = text.indexOf('{', start + 1);
+    }
+
+    return null;
+  }
+
+  Map<String, dynamic>? _extractPayloadMap(dynamic body) {
+    if (body is Map<String, dynamic>) {
+      return body;
+    }
+
+    if (body is String) {
+      return _tryDecodeJsonObjectFromText(body.trim());
+    }
+
+    return null;
+  }
+
+  String _extractNoAudioMessage(dynamic body, Map<String, dynamic>? payload) {
+    final List<String> candidates = <String>[];
+
+    if (body is String) {
+      candidates.add(body);
+    }
+
+    if (payload != null) {
+      final Map<String, dynamic> normalizedPayload =
+          _unwrapResultPayload(payload);
+
+      final dynamic rawOutput = payload['rawOutput'] ?? payload['raw_output'];
+      final dynamic audioText = payload['audioText'] ?? payload['audio_text'];
+      final dynamic errorText = payload['error'] ?? payload['message'];
+      final dynamic nestedAudioText =
+          normalizedPayload['audioText'] ?? normalizedPayload['audio_text'];
+      final dynamic nestedErrorText =
+          normalizedPayload['error'] ?? normalizedPayload['message'];
+
+      if (rawOutput is String) candidates.add(rawOutput);
+      if (audioText is String) candidates.add(audioText);
+      if (errorText is String) candidates.add(errorText);
+      if (nestedAudioText is String) candidates.add(nestedAudioText);
+      if (nestedErrorText is String) candidates.add(nestedErrorText);
+    }
+
+    for (final String candidate in candidates) {
+      final String friendly = _toUserFriendlyMessage(candidate);
+      if (friendly != candidate) {
+        return friendly;
+      }
+    }
+
+    return '';
+  }
+
+  String? _extractSessionId(Map<String, dynamic> payload) {
+    final List<String> keys = <String>[
+      'sessionId',
+      'session_id',
+      'id',
+      'session',
+    ];
+
+    for (final String key in keys) {
+      final dynamic value = payload[key];
+      if (value is String && value.trim().isNotEmpty) {
+        return value.trim();
+      }
+    }
+
+    final dynamic nestedSession = payload['session'];
+    if (nestedSession is Map<String, dynamic>) {
+      final String? nestedId = _extractSessionId(nestedSession);
+      if (nestedId != null && nestedId.isNotEmpty) {
+        return nestedId;
+      }
+    }
+
+    return null;
+  }
+
+  String _toUserFriendlyMessage(String message) {
+    final String normalized = message.toLowerCase();
+    if (normalized.contains('no face detected in video frames')) {
+      return 'No face detected. Please keep your face inside the frame and try again.';
+    }
+    if (normalized.contains('لم يتم ارجاع الصوت') ||
+        normalized.contains('لم يتم إرجاع الصوت') ||
+        normalized.contains('اشتركوا في القناة') ||
+        normalized.contains('no audio returned') ||
+        normalized.contains('audio was not returned') ||
+        normalized.contains('audio not returned')) {
+      return 'الصوت غير واضح بسبب الضوضاء. ابتعد عن المكان المزدحم أو الأصوات العالية ثم أعد التسجيل. سيتم تجاهل النتيجة الحالية.';
+    }
+    return message;
+  }
+}
